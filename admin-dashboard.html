@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – ArchStudio</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-primary: #0f0f13;
+            --bg-secondary: #1a1a23;
+            --bg-card: #1e1e2a;
+            --bg-hover: #252536;
+            --bg-input: #16161f;
+            --border: #2a2a3a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --text-muted: #6b6b80;
+            --accent: #c9a96e;
+            --accent-light: #d4bc8a;
+            --accent-glow: rgba(201, 169, 110, 0.2);
+            --danger: #e0556a;
+            --success: #4caf84;
+            --info: #5b9bd5;
+            --warning: #d4a843;
+            --sidebar-width: 260px;
+            --radius: 12px;
+            --shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary); color: var(--text-primary); display: flex; min-height: 100vh;
+        }
+        .sidebar {
+            width: var(--sidebar-width); background: var(--bg-secondary); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; position: fixed; top:0; left:0; bottom:0; z-index: 100;
+        }
+        .sidebar-header { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 700; } .sidebar-header span { color: var(--accent); }
+        .sidebar-nav { flex: 1; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+        .sidebar-nav a {
+            display: flex; align-items: center; gap: 11px; padding: 11px 14px; border-radius: 8px;
+            color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+            cursor: pointer; transition: 0.2s;
+        }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: var(--accent-glow); color: var(--accent); }
+        .sidebar-footer { padding: 14px 18px; border-top: 1px solid var(--border); }
+        .sidebar-footer .user-info { font-size: 0.85rem; color: var(--text-secondary); }
+        .sidebar-footer button {
+            width: 100%; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-secondary);
+            padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-top: 8px;
+        }
+        .main-content { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; min-height: 100vh; }
+        .topbar {
+            background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 0 28px; height: 64px;
+            display: flex; align-items: center; justify-content: space-between; position: sticky; top:0; z-index: 50;
+        }
+        .topbar h3 { font-size: 1.15rem; font-weight: 600; }
+        .page-content { padding: 28px; flex: 1; }
+        .page { display: none; } .page.active { display: block; animation: fadeIn 0.35s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 28px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+        .stat-card .stat-icon { font-size: 24px; margin-bottom: 10px; }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 700; }
+        .stat-card .stat-label { color: var(--text-muted); font-size: 0.85rem; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
+        .card-header { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .card-header h4 { font-weight: 600; }
+        .card-body { padding: 20px 22px; overflow-x: auto; } .card-body.no-padding { padding: 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; background: var(--bg-secondary); }
+        tr:hover td { background: var(--bg-hover); }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: rgba(76,175,132,0.15); color: var(--success); }
+        .badge-warning { background: rgba(212,168,67,0.15); color: var(--warning); }
+        .badge-info { background: rgba(91,155,213,0.15); color: var(--info); }
+        .badge-danger { background: rgba(224,85,106,0.15); color: var(--danger); }
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px;
+            font-weight: 600; font-size: 0.85rem; cursor: pointer; border: none; transition: 0.2s; font-family: inherit;
+        }
+        .btn-primary { background: var(--accent); color: #1a1a15; } .btn-primary:hover { background: var(--accent-light); }
+        .btn-secondary { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-sm { padding: 5px 12px; font-size: 0.78rem; }
+        .btn-xs { padding: 4px 10px; font-size: 0.7rem; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+        .modal-overlay {
+            position: fixed; inset:0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+            z-index: 200; opacity:0; pointer-events:none; transition:0.3s;
+        }
+        .modal-overlay.show { opacity:1; pointer-events:auto; }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto;
+            box-shadow: var(--shadow); transform: translateY(20px); transition: 0.3s;
+        }
+        .modal-overlay.show .modal { transform: translateY(0); }
+        .modal-header { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; background: var(--bg-card); z-index:1; }
+        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.3rem; cursor: pointer; }
+        .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+        .modal-footer { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px 14px; background: var(--bg-input); border: 1.5px solid var(--border);
+            border-radius: 6px; color: var(--text-primary); font-family: inherit; font-size: 0.9rem; outline: none;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .toast { position: fixed; top:20px; right:20px; z-index:300; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; box-shadow: var(--shadow); animation: slideIn 0.3s ease; }
+        .toast.success { background: #2d6a4f; border: 1px solid var(--success); }
+        .toast.error { background: #5c2d38; border: 1px solid var(--danger); }
+        @keyframes slideIn { from{transform:translateX(100%); opacity:0} to{transform:translateX(0); opacity:1} }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="sidebar-header">
+        <span>🏛️</span>
+        <h2>Arch<span>Studio</span></h2>
+    </div>
+    <nav class="sidebar-nav">
+        <a data-page="dashboard" class="active">📊 Dashboard</a>
+        <a data-page="projects">🏗️ Projects</a>
+        <a data-page="team">👥 Team</a>
+        <a data-page="reviews">⭐ Reviews</a>
+        <a data-page="messages">✉️ Messages</a>
+        <a data-page="about">📝 About</a>
+        <a data-page="moderators">👤 Moderators</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info" id="sidebarUser"></div>
+        <button onclick="logout()">🚪 Sign Out</button>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="topbar">
+        <h3 id="pageTitle">Dashboard</h3>
+        <span id="clock"></span>
+    </div>
+    <div class="page-content">
+        <!-- Dashboard -->
+        <div class="page active" id="page-dashboard">
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="card"><div class="card-header"><h4>📋 Recent Projects</h4></div><div class="card-body" id="recentProjects"></div></div>
+        </div>
+
+        <!-- Projects (CRUD) -->
+        <div class="page" id="page-projects">
+            <div class="card">
+                <div class="card-header"><h4>🏗️ Projects</h4><button class="btn btn-primary btn-sm" onclick="openProjectModal()">+ New Project</button></div>
+                <div class="card-body no-padding" id="projectsTable"></div>
+            </div>
+        </div>
+
+        <!-- Team (CRUD) -->
+        <div class="page" id="page-team">
+            <div class="card">
+                <div class="card-header"><h4>👥 Team Members</h4><button class="btn btn-primary btn-sm" onclick="openTeamModal()">+ Add Member</button></div>
+                <div class="card-body no-padding" id="teamTable"></div>
+            </div>
+        </div>
+
+        <!-- Reviews (approve/unapprove/delete) -->
+        <div class="page" id="page-reviews">
+            <div class="card"><div class="card-header"><h4>⭐ Reviews</h4></div><div class="card-body no-padding" id="reviewsTable"></div></div>
+        </div>
+
+        <!-- Messages (view/delete) -->
+        <div class="page" id="page-messages">
+            <div class="card"><div class="card-header"><h4>✉️ Contact Messages</h4></div><div class="card-body no-padding" id="messagesTable"></div></div>
+        </div>
+
+        <!-- About Us (edit) -->
+        <div class="page" id="page-about">
+            <div class="card"><div class="card-header"><h4>📝 About Us</h4></div>
+                <div class="card-body">
+                    <div class="form-group"><label>Company Story</label><textarea id="aboutContent" rows="6"></textarea></div>
+                    <div class="form-group"><label>Mission</label><textarea id="missionContent" rows="3"></textarea></div>
+                    <div class="form-group"><label>Years Experience</label><input type="number" id="yearsExperience"></div>
+                    <div class="form-group"><label>Projects Completed</label><input type="number" id="projectsCompleted"></div>
+                    <button class="btn btn-primary" onclick="saveAbout()">💾 Save</button>
+                    <span id="aboutSaveStatus" style="color:var(--success);display:none;">✓ Saved!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moderators (approve/reject) -->
+        <div class="page" id="page-moderators">
+            <div class="card"><div class="card-header"><h4>👤 Moderator Accounts</h4></div><div class="card-body no-padding" id="moderatorsTable"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="projectModal">
+    <div class="modal">
+        <div class="modal-header"><h3 id="projectModalTitle">New Project</h3><button class="modal-close" onclick="closeProjectModal()">✕</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="projectId">
+            <div class="form-group"><label>Title</label><input type="text" id="projectTitle"></div>
+            <div class="form-group"><label>Category</label><select id="projectCategory"><option>Residential</option><option>Commercial</option><option>Interior</option><option>Landscape</option></select></div>
+            <div class="form-group"><label>Image URL</label><input type="url" id="projectImage" oninput="previewImage('projectImage','projectPreview')"><div id="projectPreview" style="height:100px;border:1px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">Preview</div></div>
+            <div class="form-group"><label>Description</label><textarea id="projectDesc"></textarea></div>
+            <div class="form-group"><label>Location</label><input type="text" id="projectLocation"></div>
+            <div class="form-group"><label>Year</label><input type="number" id="projectYear"></div>
+            <div class="form-group"><label>Status</label><select id="projectStatus"><option>Completed</option><option>In Progress</option></select></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeProjectModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveProject()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Team Modal -->
+<div class="modal-overlay" id="teamModal">
+    <div class="modal">
+        <div class="modal-header"><h3 id="teamModalTitle">Add Team Member</h3><button class="modal-close" onclick="closeTeamModal()">✕</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="teamId">
+            <div class="form-group"><label>Title</label><select id="teamTitle"><option value="">—</option><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option><option>Prof.</option></select></div>
+            <div class="form-group"><label>Full Name</label><input type="text" id="teamName"></div>
+            <div class="form-group"><label>Role / Job Title</label><input type="text" id="teamRole"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="teamEmail"></div>
+            <div class="form-group"><label>Bio</label><textarea id="teamBio" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeTeamModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveTeamMember()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+
+    async function init() {
+        const { data: { session } } = await supabaseAdmin.auth.getSession();
+        if (!session) { window.location.href = '../login.html'; return; }
+        const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', session.user.id).single();
+        if (!profile || profile.role !== 'admin' || profile.approval_status !== 'approved') {
+            await supabaseAdmin.auth.signOut();
+            window.location.href = '../login.html';
+            return;
+        }
+        currentUser = profile;
+        document.getElementById('sidebarUser').textContent = profile.full_name || profile.email;
+        updateClock();
+        setInterval(updateClock, 60000);
+        navigateTo('dashboard');
+    }
+
+    function updateClock() {
+        document.getElementById('clock').textContent = new Date().toLocaleString('en-US', { hour:'2-digit', minute:'2-digit', weekday:'short', month:'short', day:'numeric' });
+    }
+
+    function navigateTo(page) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`page-${page}`).classList.add('active');
+        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+        document.querySelector(`.sidebar-nav a[data-page="${page}"]`).classList.add('active');
+        document.getElementById('pageTitle').textContent = page.charAt(0).toUpperCase()+page.slice(1);
+        if (page === 'dashboard') loadDashboard();
+        else if (page === 'projects') loadProjects();
+        else if (page === 'team') loadTeam();
+        else if (page === 'reviews') loadReviews();
+        else if (page === 'messages') loadMessages();
+        else if (page === 'about') loadAbout();
+        else if (page === 'moderators') loadModerators();
+    }
+    document.querySelectorAll('.sidebar-nav a').forEach(a => a.addEventListener('click', e => navigateTo(e.target.dataset.page)));
+
+    function toast(msg, type='success') {
+        const t = document.createElement('div');
+        t.className = `toast ${type}`; t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2500);
+    }
+
+    // Dashboard stats
+    async function loadDashboard() {
+        const [{ count: projects }, { count: team }, { count: reviews }, { count: messages }, { count: moderators }] = await Promise.all([
+            supabaseAdmin.from('projects').select('*', { count: 'exact', head: true }),
+            supabaseAdmin.from('team_members').select('*', { count: 'exact', head: true }),
+            supabaseAdmin.from('reviews').select('*', { count: 'exact', head: true }).eq('approved', true),
+            supabaseAdmin.from('contact_messages').select('*', { count: 'exact', head: true }),
+            supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).neq('role', 'admin')
+        ]);
+        const { data: about } = await supabaseAdmin.from('about_us').select('*').single();
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-icon">🏗️</div><div class="stat-value">${projects||0}</div><div class="stat-label">Projects</div></div>
+            <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${team||0}</div><div class="stat-label">Team Members</div></div>
+            <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value">${reviews||0}</div><div class="stat-label">Approved Reviews</div></div>
+            <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">${about?.years_experience||0}</div><div class="stat-label">Years Exp.</div></div>
+            <div class="stat-card"><div class="stat-icon">✉️</div><div class="stat-value">${messages||0}</div><div class="stat-label">Messages</div></div>
+            <div class="stat-card"><div class="stat-icon">👤</div><div class="stat-value">${moderators||0}</div><div class="stat-label">Moderators</div></div>
+        `;
+        const { data: recent } = await supabaseAdmin.from('projects').select('*').order('created_at', { ascending: false }).limit(5);
+        document.getElementById('recentProjects').innerHTML = recent.length ?
+            `<table><thead><tr><th>Project</th><th>Category</th><th>Status</th></tr></thead><tbody>${recent.map(p=>`<tr><td>${p.title}</td><td>${p.category}</td><td><span class="badge ${p.status==='Completed'?'badge-success':'badge-warning'}">${p.status}</span></td></tr>`).join('')}</tbody></table>` :
+            '<div class="empty-state">No projects yet.</div>';
+    }
+
+    // ================== PROJECTS CRUD ==================
+    async function loadProjects() {
+        const { data } = await supabaseAdmin.from('projects').select('*').order('created_at', { ascending: false });
+        const container = document.getElementById('projectsTable');
+        if (!data || !data.length) container.innerHTML = '<div class="empty-state">No projects.</div>';
+        else container.innerHTML = `<table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.map(p=>`<tr><td>${p.title}</td><td>${p.category}</td><td><span class="badge ${p.status==='Completed'?'badge-success':'badge-warning'}">${p.status}</span></td><td><button class="btn btn-secondary btn-xs" onclick="openProjectModal('${p.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteProject('${p.id}')">🗑️</button></td></tr>`).join('')}</tbody></table>`;
+    }
+    function openProjectModal(id=null) {
+        document.getElementById('projectId').value = id || '';
+        document.getElementById('projectModalTitle').textContent = id ? 'Edit Project' : 'New Project';
+        if (id) {
+            supabaseAdmin.from('projects').select('*').eq('id',id).single().then(({data}) => {
+                if(data) { document.getElementById('projectTitle').value=data.title; document.getElementById('projectCategory').value=data.category; document.getElementById('projectImage').value=data.image||''; document.getElementById('projectDesc').value=data.description||''; document.getElementById('projectLocation').value=data.location||''; document.getElementById('projectYear').value=data.year||''; document.getElementById('projectStatus').value=data.status; }
+            });
+        } else {
+            ['projectTitle','projectImage','projectDesc','projectLocation','projectYear'].forEach(id=>document.getElementById(id).value='');
+            document.getElementById('projectCategory').value='Residential'; document.getElementById('projectStatus').value='Completed';
+        }
+        document.getElementById('projectModal').classList.add('show');
+    }
+    function closeProjectModal() { document.getElementById('projectModal').classList.remove('show'); }
+    async function saveProject() {
+        const id = document.getElementById('projectId').value;
+        const project = {
+            title: document.getElementById('projectTitle').value,
+            category: document.getElementById('projectCategory').value,
+            image: document.getElementById('projectImage').value,
+            description: document.getElementById('projectDesc').value,
+            location: document.getElementById('projectLocation').value,
+            year: parseInt(document.getElementById('projectYear').value) || null,
+            status: document.getElementById('projectStatus').value,
+        };
+        if (!project.title) return toast('Title required','error');
+        let error;
+        if (id) error = (await supabaseAdmin.from('projects').update(project).eq('id',id)).error;
+        else error = (await supabaseAdmin.from('projects').insert(project)).error;
+        if (error) toast(error.message,'error');
+        else { closeProjectModal(); loadProjects(); loadDashboard(); toast(id?'Project updated':'Project created'); }
+    }
+    async function deleteProject(id) {
+        if (!confirm('Delete project?')) return;
+        await supabaseAdmin.from('projects').delete().eq('id',id);
+        loadProjects(); loadDashboard(); toast('Project deleted');
+    }
+
+    // ================== TEAM CRUD ==================
+    async function loadTeam() {
+        const { data } = await supabaseAdmin.from('team_members').select('*').order('created_at', { ascending: true });
+        const container = document.getElementById('teamTable');
+        if (!data || !data.length) container.innerHTML = '<div class="empty-state">No team members.</div>';
+        else container.innerHTML = `<table><thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Actions</th></tr></thead><tbody>${data.map(m=>`<tr><td>${(m.title?m.title+' ':'')+m.name}</td><td>${m.role||'—'}</td><td>${m.email||'—'}</td><td><button class="btn btn-secondary btn-xs" onclick="openTeamModal('${m.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteTeam('${m.id}')">🗑️</button></td></tr>`).join('')}</tbody></table>`;
+    }
+    function openTeamModal(id=null) {
+        document.getElementById('teamId').value = id || '';
+        document.getElementById('teamModalTitle').textContent = id ? 'Edit Team Member' : 'Add Team Member';
+        if (id) {
+            supabaseAdmin.from('team_members').select('*').eq('id',id).single().then(({data}) => {
+                if(data) { document.getElementById('teamTitle').value=data.title||''; document.getElementById('teamName').value=data.name; document.getElementById('teamRole').value=data.role||''; document.getElementById('teamEmail').value=data.email||''; document.getElementById('teamBio').value=data.bio||''; }
+            });
+        } else {
+            ['teamTitle','teamName','teamRole','teamEmail','teamBio'].forEach(id=>document.getElementById(id).value='');
+        }
+        document.getElementById('teamModal').classList.add('show');
+    }
+    function closeTeamModal() { document.getElementById('teamModal').classList.remove('show'); }
+    async function saveTeamMember() {
+        const id = document.getElementById('teamId').value;
+        const member = {
+            title: document.getElementById('teamTitle').value,
+            name: document.getElementById('teamName').value.trim(),
+            role: document.getElementById('teamRole').value.trim(),
+            email: document.getElementById('teamEmail').value.trim(),
+            bio: document.getElementById('teamBio').value.trim(),
+        };
+        if (!member.name) return toast('Name required','error');
+        let error;
+        if (id) error = (await supabaseAdmin.from('team_members').update(member).eq('id',id)).error;
+        else error = (await supabaseAdmin.from('team_members').insert(member)).error;
+        if (error) toast(error.message,'error');
+        else { closeTeamModal(); loadTeam(); loadDashboard(); toast(id?'Member updated':'Member added'); }
+    }
+    async function deleteTeam(id) {
+        if (!confirm('Remove member?')) return;
+        await supabaseAdmin.from('team_members').delete().eq('id',id);
+        loadTeam(); loadDashboard(); toast('Member removed');
+    }
+
+    // ================== REVIEWS MANAGE ==================
+    async function loadReviews() {
+        const { data } = await supabaseAdmin.from('reviews').select('*').order('created_at', { ascending: false });
+        const container = document.getElementById('reviewsTable');
+        if (!data || !data.length) container.innerHTML = '<div class="empty-state">No reviews.</div>';
+        else container.innerHTML = `<table><thead><tr><th>Client</th><th>Rating</th><th>Text</th><th>Approved</th><th>Actions</th></tr></thead><tbody>${data.map(r=>`<tr><td>${r.client}</td><td>${'⭐'.repeat(r.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${r.text}</td><td><span class="badge ${r.approved?'badge-success':'badge-warning'}">${r.approved?'Yes':'No'}</span></td><td><button class="btn btn-xs ${r.approved?'btn-danger':'btn-success'}" onclick="toggleReview('${r.id}')">${r.approved?'Unapprove':'Approve'}</button> <button class="btn btn-danger btn-xs" onclick="deleteReview('${r.id}')">🗑️</button></td></tr>`).join('')}</tbody></table>`;
+    }
+    async function toggleReview(id) {
+        const { data } = await supabaseAdmin.from('reviews').select('approved').eq('id',id).single();
+        await supabaseAdmin.from('reviews').update({ approved: !data.approved }).eq('id',id);
+        loadReviews(); loadDashboard();
+    }
+    async function deleteReview(id) {
+        if (!confirm('Delete review?')) return;
+        await supabaseAdmin.from('reviews').delete().eq('id',id);
+        loadReviews(); loadDashboard(); toast('Review deleted');
+    }
+
+    // ================== MESSAGES ==================
+    async function loadMessages() {
+        const { data } = await supabaseAdmin.from('contact_messages').select('*').order('created_at', { ascending: false });
+        const container = document.getElementById('messagesTable');
+        if (!data || !data.length) container.innerHTML = '<div class="empty-state">No messages.</div>';
+        else container.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th><th>Actions</th></tr></thead><tbody>${data.map(m=>`<tr><td>${m.name}</td><td>${m.email}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;">${m.message}</td><td>${new Date(m.created_at).toLocaleDateString()}</td><td><button class="btn btn-danger btn-xs" onclick="deleteMessage('${m.id}')">🗑️</button></td></tr>`).join('')}</tbody></table>`;
+    }
+    async function deleteMessage(id) {
+        if (!confirm('Delete message?')) return;
+        await supabaseAdmin.from('contact_messages').delete().eq('id',id);
+        loadMessages(); loadDashboard(); toast('Message deleted');
+    }
+
+    // ================== ABOUT US ==================
+    async function loadAbout() {
+        const { data } = await supabaseAdmin.from('about_us').select('*').single();
+        if (data) {
+            document.getElementById('aboutContent').value = data.content || '';
+            document.getElementById('missionContent').value = data.mission || '';
+            document.getElementById('yearsExperience').value = data.years_experience || '';
+            document.getElementById('projectsCompleted').value = data.projects_completed || '';
+        }
+    }
+    async function saveAbout() {
+        const about = {
+            content: document.getElementById('aboutContent').value,
+            mission: document.getElementById('missionContent').value,
+            years_experience: parseInt(document.getElementById('yearsExperience').value) || 0,
+            projects_completed: parseInt(document.getElementById('projectsCompleted').value) || 0,
+        };
+        const { error } = await supabaseAdmin.from('about_us').upsert({ id: 1, ...about });
+        if (error) toast(error.message,'error');
+        else { document.getElementById('aboutSaveStatus').style.display='inline'; setTimeout(()=>document.getElementById('aboutSaveStatus').style.display='none',2000); toast('About saved'); }
+    }
+
+    // ================== MODERATORS ==================
+    async function loadModerators() {
+        const { data } = await supabaseAdmin.from('profiles').select('*').neq('role', 'admin').order('created_at', { ascending: false });
+        const container = document.getElementById('moderatorsTable');
+        if (!data || !data.length) container.innerHTML = '<div class="empty-state">No moderators yet.</div>';
+        else container.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.map(m=>`<tr><td>${m.full_name||'—'}</td><td>${m.email}</td><td>${m.phone||'—'}</td><td><span class="badge ${m.approval_status==='approved'?'badge-success':m.approval_status==='rejected'?'badge-danger':'badge-warning'}">${m.approval_status}</span></td><td>${m.approval_status==='pending'?`<button class="btn btn-success btn-xs" onclick="approveModerator('${m.id}')">✅ Approve</button> <button class="btn btn-danger btn-xs" onclick="rejectModerator('${m.id}')">❌ Reject</button>`:''}${m.approval_status==='approved'?`<button class="btn btn-danger btn-xs" onclick="rejectModerator('${m.id}')">Revoke</button>`:''}${m.approval_status==='rejected'?`<button class="btn btn-success btn-xs" onclick="approveModerator('${m.id}')">Re-approve</button>`:''}</td></tr>`).join('')}</tbody></table>`;
+    }
+    async function approveModerator(id) {
+        await supabaseAdmin.from('profiles').update({ approval_status: 'approved' }).eq('id', id);
+        loadModerators(); loadDashboard(); toast('Moderator approved');
+    }
+    async function rejectModerator(id) {
+        await supabaseAdmin.from('profiles').update({ approval_status: 'rejected' }).eq('id', id);
+        loadModerators(); loadDashboard(); toast('Moderator rejected');
+    }
+
+    // Preview helper
+    function previewImage(inputId, previewId) {
+        const url = document.getElementById(inputId).value;
+        const preview = document.getElementById(previewId);
+        if (url && url.startsWith('http')) preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+        else preview.innerHTML = 'Preview';
+    }
+
+    function escapeHtml(str) { const d=document.createElement('div'); d.textContent=str||''; return d.innerHTML; }
+    async function logout() { await supabaseAdmin.auth.signOut(); window.location.href = '../login.html'; }
+
+    // Close modals
+    document.getElementById('projectModal').addEventListener('click', e => { if (e.target===e.currentTarget) closeProjectModal(); });
+    document.getElementById('teamModal').addEventListener('click', e => { if (e.target===e.currentTarget) closeTeamModal(); });
+
+    init();
+</script>
+</body>
+</html>
