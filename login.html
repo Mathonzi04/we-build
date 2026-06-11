@@ -11,128 +11,87 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
         }
         body {
-            background: linear-gradient(135deg, #f0f4fa 0%, #e2e8f0 100%);
+            background: linear-gradient(135deg, #1e2a47, #2c5282);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 1.5rem;
+            padding: 1rem;
         }
-        .login-container, .reset-container {
-            max-width: 450px;
+        .login-card {
+            max-width: 420px;
             width: 100%;
             background: white;
             border-radius: 2rem;
-            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.25);
-            overflow: hidden;
+            padding: 2rem;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.2);
         }
-        .brand {
-            background: #1e2a47;
-            padding: 1.8rem;
+        .logo {
             text-align: center;
-            color: white;
+            margin-bottom: 1.5rem;
         }
-        .brand i {
-            font-size: 2.2rem;
-            margin-bottom: 0.5rem;
+        .logo i {
+            font-size: 2.5rem;
+            color: #1e2a47;
         }
-        .brand h2 {
-            font-weight: 600;
-        }
-        .form-panel {
-            padding: 2rem 1.8rem;
+        .logo h2 {
+            margin-top: 0.5rem;
+            color: #1e2a47;
         }
         .input-group {
-            margin-bottom: 1.3rem;
+            margin-bottom: 1.2rem;
         }
         .input-group label {
             display: block;
             font-weight: 500;
-            margin-bottom: 0.4rem;
-            color: #1f2937;
+            margin-bottom: 0.3rem;
         }
         .input-group input {
             width: 100%;
-            padding: 0.9rem 1rem;
-            border: 1px solid #d1d5db;
+            padding: 0.8rem;
+            border: 1px solid #cbd5e0;
             border-radius: 1rem;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
-        .input-group input:focus {
-            outline: none;
-            border-color: #1e2a47;
-            box-shadow: 0 0 0 3px rgba(30,42,71,0.15);
-        }
-        .btn-primary {
+        .btn-login {
             background: #1e2a47;
             color: white;
-            border: none;
             width: 100%;
-            padding: 0.9rem;
-            font-weight: 600;
+            padding: 0.8rem;
+            border: none;
             border-radius: 2rem;
-            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.6rem;
+            gap: 0.5rem;
         }
-        .btn-primary:hover {
-            background: #0f1a30;
-        }
-        .forgot-row {
+        .forgot-link {
             text-align: right;
             margin-top: 0.8rem;
         }
-        .forgot-link {
+        .forgot-link button {
             background: none;
             border: none;
-            color: #1e2a47;
-            font-size: 0.85rem;
+            color: #2c5282;
             cursor: pointer;
-            font-weight: 500;
+            font-size: 0.8rem;
         }
         .error-msg {
-            color: #dc2626;
-            font-size: 0.8rem;
-            margin-top: 0.7rem;
+            color: #e53e3e;
             text-align: center;
-            background: #fee2e2;
-            padding: 0.5rem;
-            border-radius: 1rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
         }
         .success-msg {
-            color: #15803d;
-            background: #dcfce7;
-            padding: 0.5rem;
-            border-radius: 1rem;
-            margin-top: 0.7rem;
+            color: #2f855a;
             text-align: center;
-        }
-        .dashboard {
-            display: none;
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 2rem;
-            padding: 2rem;
-            text-align: center;
-        }
-        .logout-btn {
-            background: #e5e7eb;
-            border: none;
-            padding: 0.6rem 1.5rem;
-            border-radius: 2rem;
-            font-weight: 500;
-            cursor: pointer;
-            margin-top: 1.5rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
         }
         .modal {
             display: none;
@@ -148,333 +107,152 @@
         }
         .modal-card {
             background: white;
-            max-width: 400px;
+            max-width: 350px;
             width: 90%;
             border-radius: 1.5rem;
-            padding: 1.8rem;
+            padding: 1.5rem;
             text-align: center;
+        }
+        .modal-card input {
+            width: 100%;
+            padding: 0.7rem;
+            margin: 1rem 0;
+            border: 1px solid #cbd5e0;
+            border-radius: 1rem;
         }
         .modal-buttons {
             display: flex;
             gap: 0.8rem;
             margin-top: 1rem;
         }
-        .modal-buttons button {
-            flex: 1;
-            padding: 0.7rem;
-            border-radius: 2rem;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        footer {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.7rem;
-            color: #6b7280;
-            padding-bottom: 1rem;
-        }
-        .reset-container {
-            display: none;
-        }
     </style>
 </head>
 <body>
-    <!-- Normal Login Card -->
-    <div id="loginCard" class="login-container">
-        <div class="brand">
+    <div class="login-card">
+        <div class="logo">
             <i class="fas fa-store"></i>
-            <h2>CodeCrafted Admin</h2>
-            <p>Sign in to manage templates & orders</p>
+            <h2>Admin Login</h2>
+            <p>CodeCrafted Dashboard</p>
         </div>
-        <div class="form-panel">
-            <div class="input-group">
-                <label><i class="fas fa-envelope"></i> Email address</label>
-                <input type="email" id="adminEmail" placeholder="admin@yourstore.com">
-            </div>
-            <div class="input-group">
-                <label><i class="fas fa-lock"></i> Password</label>
-                <input type="password" id="adminPassword" placeholder="••••••••">
-            </div>
-            <button id="loginBtn" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Login</button>
-            <div class="forgot-row">
-                <button id="forgotBtn" class="forgot-link"><i class="fas fa-key"></i> Forgot password?</button>
-            </div>
-            <div id="loginMessage"></div>
+        <div class="input-group">
+            <label><i class="fas fa-envelope"></i> Email</label>
+            <input type="email" id="email" placeholder="admin@example.com">
         </div>
-        <footer>Protected area – Admin only</footer>
+        <div class="input-group">
+            <label><i class="fas fa-lock"></i> Password</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        <button id="loginBtn" class="btn-login"><i class="fas fa-sign-in-alt"></i> Login</button>
+        <div class="forgot-link">
+            <button id="forgotBtn"><i class="fas fa-key"></i> Forgot password?</button>
+        </div>
+        <div id="message"></div>
     </div>
 
-    <!-- Password Reset Card (shown when recovery hash is present) -->
-    <div id="resetCard" class="reset-container">
-        <div class="brand">
-            <i class="fas fa-lock-reset"></i>
-            <h2>Set New Password</h2>
-            <p>Enter your new password below</p>
-        </div>
-        <div class="form-panel">
-            <div class="input-group">
-                <label><i class="fas fa-key"></i> New password</label>
-                <input type="password" id="newPassword" placeholder="At least 6 characters">
-            </div>
-            <div class="input-group">
-                <label><i class="fas fa-check-circle"></i> Confirm password</label>
-                <input type="password" id="confirmPassword" placeholder="Confirm new password">
-            </div>
-            <button id="resetPasswordBtn" class="btn-primary"><i class="fas fa-save"></i> Update Password</button>
-            <div id="resetMessage"></div>
-            <div class="forgot-row">
-                <button id="backToLoginFromReset" class="forgot-link"><i class="fas fa-arrow-left"></i> Back to login</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Dashboard after login -->
-    <div id="dashboard" class="dashboard">
-        <i class="fas fa-chalkboard-user" style="font-size: 3rem; color: #1e2a47;"></i>
-        <h2 style="margin: 1rem 0;">Welcome, <span id="adminEmailDisplay"></span></h2>
-        <p>You are now logged in as administrator.</p>
-        <button id="logoutDashboardBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-    </div>
-
-    <!-- Forgot Password Modal (send reset email) -->
+    <!-- Forgot Password Modal -->
     <div id="forgotModal" class="modal">
         <div class="modal-card">
-            <h3><i class="fas fa-paper-plane"></i> Reset password</h3>
-            <p>Enter your email to receive a reset link</p>
-            <input type="email" id="resetEmail" placeholder="admin@example.com">
+            <i class="fas fa-paper-plane" style="font-size: 2rem;"></i>
+            <h3>Reset Password</h3>
+            <input type="email" id="resetEmail" placeholder="Your email">
             <div class="modal-buttons">
-                <button id="sendResetBtn" class="btn-primary" style="background:#1e2a47;"><i class="fas fa-envelope"></i> Send</button>
-                <button id="cancelModalBtn" style="background:#e5e7eb;">Cancel</button>
+                <button id="sendResetBtn" style="background:#1e2a47; color:white;">Send</button>
+                <button id="cancelResetBtn">Cancel</button>
             </div>
-            <div id="modalMessage"></div>
+            <div id="resetMessage"></div>
         </div>
     </div>
 
     <script>
-        // Supabase config
-        const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-        
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        (function() {
+            const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+            const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const DASHBOARD_URL = 'dashboard.html';
 
-        // IMPORTANT: Your GitHub Pages URL – where the reset link will redirect to
-        const REDIRECT_URL = 'https://mathonzi04.github.io/we-build/login.html';
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+            const messageDiv = document.getElementById('message');
+            const forgotBtn = document.getElementById('forgotBtn');
+            const forgotModal = document.getElementById('forgotModal');
+            const resetEmail = document.getElementById('resetEmail');
+            const sendResetBtn = document.getElementById('sendResetBtn');
+            const cancelResetBtn = document.getElementById('cancelResetBtn');
+            const resetMessage = document.getElementById('resetMessage');
 
-        // DOM elements
-        const loginCard = document.getElementById('loginCard');
-        const resetCard = document.getElementById('resetCard');
-        const dashboardDiv = document.getElementById('dashboard');
-        const adminEmailInput = document.getElementById('adminEmail');
-        const adminPasswordInput = document.getElementById('adminPassword');
-        const loginBtn = document.getElementById('loginBtn');
-        const loginMessageDiv = document.getElementById('loginMessage');
-        const forgotBtn = document.getElementById('forgotBtn');
-        const forgotModal = document.getElementById('forgotModal');
-        const resetEmailInput = document.getElementById('resetEmail');
-        const sendResetBtn = document.getElementById('sendResetBtn');
-        const cancelModalBtn = document.getElementById('cancelModalBtn');
-        const modalMessageDiv = document.getElementById('modalMessage');
-        const logoutDashboardBtn = document.getElementById('logoutDashboardBtn');
-        const adminEmailDisplay = document.getElementById('adminEmailDisplay');
-        
-        // Reset card elements
-        const newPasswordInput = document.getElementById('newPassword');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-        const resetMessageDiv = document.getElementById('resetMessage');
-        const backToLoginFromReset = document.getElementById('backToLoginFromReset');
-
-        function showLoginMessage(msg, isError = true) {
-            loginMessageDiv.innerHTML = `<div class="${isError ? 'error-msg' : 'success-msg'}"><i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}</div>`;
-            setTimeout(() => { if (loginMessageDiv.firstChild) loginMessageDiv.innerHTML = ''; }, 4000);
-        }
-
-        function showResetMessage(msg, isError = true) {
-            resetMessageDiv.innerHTML = `<div class="${isError ? 'error-msg' : 'success-msg'}">${msg}</div>`;
-            setTimeout(() => { if (resetMessageDiv.firstChild) resetMessageDiv.innerHTML = ''; }, 4000);
-        }
-
-        function showModalMessage(msg, isError = true) {
-            modalMessageDiv.innerHTML = `<div style="color:${isError ? '#dc2626' : '#15803d'}; font-size:0.8rem; margin-top:0.8rem;">${msg}</div>`;
-            setTimeout(() => { if (modalMessageDiv.firstChild) modalMessageDiv.innerHTML = ''; }, 4000);
-        }
-
-        // Login handler
-        async function handleLogin() {
-            const email = adminEmailInput.value.trim();
-            const password = adminPasswordInput.value;
-            if (!email || !password) {
-                showLoginMessage('Email and password are required', true);
-                return;
-            }
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Authenticating...';
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            loginBtn.disabled = false;
-            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
-            if (error) {
-                showLoginMessage(error.message, true);
-                return;
-            }
-            if (data.session) {
-                loginCard.style.display = 'none';
-                dashboardDiv.style.display = 'block';
-                adminEmailDisplay.textContent = data.session.user.email;
-                adminEmailInput.value = '';
-                adminPasswordInput.value = '';
-            } else {
-                showLoginMessage('Login failed', true);
-            }
-        }
-
-        async function handleLogout() {
-            await supabaseClient.auth.signOut();
-            loginCard.style.display = 'block';
-            dashboardDiv.style.display = 'none';
-            resetCard.style.display = 'none';
-            adminEmailInput.value = '';
-            adminPasswordInput.value = '';
-            showLoginMessage('Logged out successfully', false);
-        }
-
-        // Forgot password: send reset email to the FIXED GitHub Pages URL
-        async function sendResetEmail() {
-            const email = resetEmailInput.value.trim();
-            if (!email) {
-                showModalMessage('Please enter your email address', true);
-                return;
-            }
-            sendResetBtn.disabled = true;
-            sendResetBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending...';
-            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: REDIRECT_URL,
-            });
-            sendResetBtn.disabled = false;
-            sendResetBtn.innerHTML = '<i class="fas fa-envelope"></i> Send';
-            if (error) {
-                showModalMessage(error.message, true);
-            } else {
-                showModalMessage('Password reset link sent! Check your inbox.', false);
-                setTimeout(() => {
-                    forgotModal.style.display = 'none';
-                    resetEmailInput.value = '';
-                }, 2000);
-            }
-        }
-
-        // Handle recovery mode when user clicks reset link from email
-        async function handleRecoveryMode() {
-            const hash = window.location.hash;
-            if (hash && hash.includes('type=recovery')) {
-                loginCard.style.display = 'none';
-                resetCard.style.display = 'block';
-                dashboardDiv.style.display = 'none';
-                resetMessageDiv.innerHTML = '';
-                // Ensure session is active with the recovery token
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
-                if (error || !session) {
-                    showResetMessage('Invalid or expired reset link. Please request a new one.', true);
+            async function handleLogin() {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                if (!email || !password) {
+                    messageDiv.innerHTML = '<div class="error-msg">Email and password required</div>';
+                    return;
+                }
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Logging in...';
+                const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+                if (error) {
+                    messageDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
+                    return;
+                }
+                if (data.session) {
+                    window.location.href = DASHBOARD_URL;
                 }
             }
-        }
 
-        // Update password after reset
-        async function updatePassword() {
-            const newPwd = newPasswordInput.value;
-            const confirmPwd = confirmPasswordInput.value;
-            if (!newPwd || !confirmPwd) {
-                showResetMessage('Please fill both password fields', true);
-                return;
-            }
-            if (newPwd.length < 6) {
-                showResetMessage('Password must be at least 6 characters', true);
-                return;
-            }
-            if (newPwd !== confirmPwd) {
-                showResetMessage('Passwords do not match', true);
-                return;
-            }
-            resetPasswordBtn.disabled = true;
-            resetPasswordBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Updating...';
-            const { error } = await supabaseClient.auth.updateUser({ password: newPwd });
-            resetPasswordBtn.disabled = false;
-            resetPasswordBtn.innerHTML = '<i class="fas fa-save"></i> Update Password';
-            if (error) {
-                showResetMessage(error.message, true);
-                return;
-            }
-            showResetMessage('Password updated successfully! Redirecting to login...', false);
-            await supabaseClient.auth.signOut();
-            window.location.hash = '';
-            setTimeout(() => {
-                resetCard.style.display = 'none';
-                loginCard.style.display = 'block';
-                dashboardDiv.style.display = 'none';
-                newPasswordInput.value = '';
-                confirmPasswordInput.value = '';
-                showLoginMessage('Password changed. Please log in with your new password.', false);
-            }, 2000);
-        }
-
-        function backToLogin() {
-            window.location.hash = '';
-            supabaseClient.auth.signOut();
-            resetCard.style.display = 'none';
-            loginCard.style.display = 'block';
-            dashboardDiv.style.display = 'none';
-            newPasswordInput.value = '';
-            confirmPasswordInput.value = '';
-        }
-
-        // Event listeners
-        loginBtn.addEventListener('click', handleLogin);
-        adminPasswordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
-        logoutDashboardBtn.addEventListener('click', handleLogout);
-        forgotBtn.addEventListener('click', () => { forgotModal.style.display = 'flex'; resetEmailInput.value = ''; modalMessageDiv.innerHTML = ''; });
-        cancelModalBtn.addEventListener('click', () => { forgotModal.style.display = 'none'; });
-        sendResetBtn.addEventListener('click', sendResetEmail);
-        forgotModal.addEventListener('click', (e) => { if (e.target === forgotModal) forgotModal.style.display = 'none'; });
-        resetPasswordBtn.addEventListener('click', updatePassword);
-        backToLoginFromReset.addEventListener('click', backToLogin);
-
-        // Check existing session
-        async function checkExistingSession() {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session && !window.location.hash.includes('type=recovery')) {
-                loginCard.style.display = 'none';
-                dashboardDiv.style.display = 'block';
-                adminEmailDisplay.textContent = session.user.email;
-            } else {
-                loginCard.style.display = 'block';
-                dashboardDiv.style.display = 'none';
-            }
-            await handleRecoveryMode();
-        }
-
-        supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                const isRecovery = window.location.hash.includes('type=recovery');
-                if (!isRecovery) {
-                    loginCard.style.display = 'none';
-                    dashboardDiv.style.display = 'block';
-                    adminEmailDisplay.textContent = session.user.email;
-                    resetCard.style.display = 'none';
+            async function sendReset() {
+                const email = resetEmail.value.trim();
+                if (!email) {
+                    resetMessage.innerHTML = '<div class="error-msg">Enter email</div>';
+                    return;
+                }
+                sendResetBtn.disabled = true;
+                sendResetBtn.innerHTML = 'Sending...';
+                const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + window.location.pathname,
+                });
+                sendResetBtn.disabled = false;
+                sendResetBtn.innerHTML = 'Send';
+                if (error) {
+                    resetMessage.innerHTML = `<div class="error-msg">${error.message}</div>`;
                 } else {
-                    loginCard.style.display = 'none';
-                    resetCard.style.display = 'block';
-                    dashboardDiv.style.display = 'none';
-                }
-            } else if (event === 'SIGNED_OUT') {
-                if (!window.location.hash.includes('type=recovery')) {
-                    loginCard.style.display = 'block';
-                    dashboardDiv.style.display = 'none';
-                    resetCard.style.display = 'none';
+                    resetMessage.innerHTML = '<div class="success-msg">Reset link sent! Check your email.</div>';
+                    setTimeout(() => {
+                        forgotModal.style.display = 'none';
+                        resetEmail.value = '';
+                        resetMessage.innerHTML = '';
+                    }, 2000);
                 }
             }
-        });
 
-        checkExistingSession();
+            loginBtn.addEventListener('click', handleLogin);
+            passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLogin(); });
+            forgotBtn.addEventListener('click', () => { forgotModal.style.display = 'flex'; });
+            cancelResetBtn.addEventListener('click', () => { forgotModal.style.display = 'none'; });
+            sendResetBtn.addEventListener('click', sendReset);
+            window.onclick = (e) => { if (e.target === forgotModal) forgotModal.style.display = 'none'; };
+
+            // Handle password reset recovery (if user clicks reset link)
+            async function handleRecovery() {
+                const hash = window.location.hash;
+                if (hash && hash.includes('type=recovery')) {
+                    const newPwd = prompt('Enter your new password (min 6 characters):');
+                    if (newPwd && newPwd.length >= 6) {
+                        const { error } = await _supabase.auth.updateUser({ password: newPwd });
+                        if (error) alert('Error: ' + error.message);
+                        else {
+                            alert('Password updated! Please login with new password.');
+                            window.location.hash = '';
+                        }
+                    } else if (newPwd) {
+                        alert('Password must be at least 6 characters.');
+                    }
+                }
+            }
+            handleRecovery();
+        })();
     </script>
 </body>
 </html>

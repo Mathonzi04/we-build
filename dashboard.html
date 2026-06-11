@@ -3,481 +3,397 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard – ArchStudio</title>
+    <title>Admin Dashboard | CodeCrafted</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Same complete CSS as before – no changes needed */
-        :root {
-            --bg-primary: #0f0f13; --bg-secondary: #1a1a23; --bg-card: #1e1e2a; --bg-hover: #252536;
-            --bg-input: #16161f; --border: #2a2a3a; --border-light: #333348;
-            --text-primary: #e8e8f0; --text-secondary: #a0a0b8; --text-muted: #6b6b80;
-            --accent: #c9a96e; --accent-light: #d4bc8a; --accent-glow: rgba(201, 169, 110, 0.2);
-            --danger: #e0556a; --success: #4caf84; --info: #5b9bd5; --warning: #d4a843;
-            --sidebar-width: 260px; --radius: 12px; --shadow: 0 4px 16px rgba(0,0,0,0.35);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
         }
-        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg-primary); color: var(--text-primary); display: flex; min-height: 100vh;
+            background: #f0f4f8;
+            padding: 1.5rem;
         }
-        .sidebar {
-            width: var(--sidebar-width); background: var(--bg-secondary); border-right: 1px solid var(--border);
-            display: flex; flex-direction: column; position: fixed; top:0; left:0; bottom:0; z-index: 100;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
-        .sidebar-header { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-        .sidebar-header h2 { font-size: 1.1rem; font-weight: 700; }
-        .sidebar-header span { color: var(--accent); }
-        .sidebar-nav { flex: 1; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
-        .sidebar-nav a {
-            display: flex; align-items: center; gap: 11px; padding: 11px 14px; border-radius: 8px;
-            color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; font-weight: 500;
-            transition: 0.2s; cursor: pointer;
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        .sidebar-nav a:hover, .sidebar-nav a.active { background: var(--accent-glow); color: var(--accent); }
-        .sidebar-footer { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-        .sidebar-footer .user-info { font-size: 0.85rem; color: var(--text-secondary); }
-        .sidebar-footer button {
-            background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-secondary);
-            padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+        .logout-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
         }
-        .main-content { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; min-height: 100vh; }
-        .topbar {
-            background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 0 28px; height: 64px;
-            display: flex; align-items: center; justify-content: space-between; position: sticky; top:0; z-index: 50;
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
-        .topbar h3 { font-size: 1.15rem; font-weight: 600; }
-        .page-content { padding: 28px; flex: 1; }
-        .page { display: none; } .page.active { display: block; animation: fadeIn 0.35s ease; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 28px; }
-        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-        .stat-card .stat-icon { font-size: 24px; margin-bottom: 10px; }
-        .stat-card .stat-value { font-size: 2rem; font-weight: 700; }
-        .stat-card .stat-label { color: var(--text-muted); font-size: 0.85rem; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
-        .card-header { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .card-header h4 { font-weight: 600; }
-        .card-body { padding: 20px 22px; overflow-x: auto; } .card-body.no-padding { padding: 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--text-muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; background: var(--bg-secondary); }
-        tr:hover td { background: var(--bg-hover); }
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-        .badge-success { background: rgba(76,175,132,0.15); color: var(--success); }
-        .badge-warning { background: rgba(212,168,67,0.15); color: var(--warning); }
-        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: none; transition: 0.2s; font-family: inherit; }
-        .btn-primary { background: var(--accent); color: #1a1a15; } .btn-primary:hover { background: var(--accent-light); }
-        .btn-secondary { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border); }
-        .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-        .btn-sm { padding: 5px 12px; font-size: 0.78rem; } .btn-xs { padding: 4px 10px; font-size: 0.7rem; }
-        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
-        .modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 200; opacity:0; pointer-events:none; transition:0.3s; }
-        .modal-overlay.show { opacity:1; pointer-events:auto; }
-        .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); transform: translateY(20px); transition: 0.3s; }
-        .modal-overlay.show .modal { transform: translateY(0); }
-        .modal-header { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; background: var(--bg-card); z-index:1; }
-        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.3rem; cursor: pointer; }
-        .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
-        .modal-footer { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; background: var(--bg-input); border: 1.5px solid var(--border); border-radius: 6px; color: var(--text-primary); font-family: inherit; font-size: 0.9rem; outline: none; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .toast { position: fixed; top:20px; right:20px; z-index:300; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; box-shadow: var(--shadow); animation: slideIn 0.3s ease; }
-        .toast.success { background: #2d6a4f; border: 1px solid var(--success); }
-        .toast.error { background: #5c2d38; border: 1px solid var(--danger); }
-        @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.2rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .card h3 {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .message-item, .booking-item {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.8rem 0;
+        }
+        .badge {
+            background: #e2e8f0;
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.7rem;
+        }
+        .badge-delivered {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        button {
+            background: #1e2a47;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+        .project-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .project-card {
+            background: #f7fafc;
+            border-radius: 0.8rem;
+            padding: 0.8rem;
+            width: 200px;
+        }
+        .project-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        .upload-area {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 2px dashed #cbd5e0;
+            border-radius: 1rem;
+            text-align: center;
+        }
+        .image-preview {
+            display: flex;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        .image-preview img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        .error-msg {
+            color: #e53e3e;
+            font-size: 0.8rem;
+        }
+        .success-msg {
+            color: #2f855a;
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #718096;
+        }
+        @media (max-width: 800px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-header">
-        <span>🏛️</span>
-        <h2>Arch<span>Studio</span></h2>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h2><i class="fas fa-chalkboard-user"></i> Admin Dashboard</h2>
+            <span id="adminEmail" style="font-size: 0.8rem;"></span>
+        </div>
+        <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
-    <nav class="sidebar-nav">
-        <a data-page="dashboard" class="active">📊 Dashboard</a>
-        <a data-page="projects">🏗️ Projects</a>
-        <a data-page="team">👥 Team</a>
-        <a data-page="reviews">⭐ Reviews</a>
-        <a data-page="messages">✉️ Messages</a>
-        <a data-page="about">📝 About Us</a>
-    </nav>
-    <div class="sidebar-footer">
-        <div class="user-info" id="sidebarUser"></div>
-        <button onclick="logout()">🚪 Sign Out</button>
-    </div>
-</div>
 
-<div class="main-content">
-    <div class="topbar">
-        <h3 id="pageTitle">Dashboard</h3>
-        <span id="clock"></span>
-    </div>
-    <div class="page-content">
-        <!-- Dashboard Page -->
-        <div class="page active" id="page-dashboard">
-            <div class="stats-grid" id="statsGrid"></div>
+    <div class="dashboard-grid">
+        <!-- LEFT COLUMN: About Us / Team + Messages -->
+        <div>
+            <!-- About Us / Team Section -->
             <div class="card">
-                <div class="card-header"><h4>📋 Recent Projects</h4></div>
-                <div class="card-body no-padding" id="recentProjects"></div>
-            </div>
-        </div>
-
-        <!-- Projects Page -->
-        <div class="page" id="page-projects">
-            <div class="card">
-                <div class="card-header"><h4>🏗️ Projects</h4><button class="btn btn-primary btn-sm" onclick="openProjectModal()">+ New Project</button></div>
-                <div class="card-body no-padding" id="projectsTable"></div>
-            </div>
-        </div>
-
-        <!-- Team Page (updated) -->
-        <div class="page" id="page-team">
-            <div class="card">
-                <div class="card-header"><h4>👥 Team Members</h4><button class="btn btn-primary btn-sm" onclick="openTeamModal()">+ Add Member</button></div>
-                <div class="card-body no-padding" id="teamTable"></div>
-            </div>
-        </div>
-
-        <!-- Reviews Page -->
-        <div class="page" id="page-reviews">
-            <div class="card">
-                <div class="card-header"><h4>⭐ Reviews</h4></div>
-                <div class="card-body no-padding" id="reviewsTable"></div>
-            </div>
-        </div>
-
-        <!-- Messages Page -->
-        <div class="page" id="page-messages">
-            <div class="card">
-                <div class="card-header"><h4>✉️ Contact Messages</h4></div>
-                <div class="card-body no-padding" id="messagesTable"></div>
-            </div>
-        </div>
-
-        <!-- About Us Page -->
-        <div class="page" id="page-about">
-            <div class="card">
-                <div class="card-header"><h4>📝 About Us</h4></div>
-                <div class="card-body">
-                    <div class="form-group"><label>Company Story</label><textarea id="aboutContent" rows="6"></textarea></div>
-                    <div class="form-group"><label>Mission</label><textarea id="missionContent" rows="3"></textarea></div>
-                    <div class="form-group"><label>Years Experience</label><input type="number" id="yearsExperience"></div>
-                    <div class="form-group"><label>Projects Completed</label><input type="number" id="projectsCompleted"></div>
-                    <button class="btn btn-primary" onclick="saveAbout()">💾 Save About</button>
-                    <span id="aboutSaveStatus" style="color:var(--success);display:none;">✓ Saved!</span>
+                <h3><i class="fas fa-users"></i> About Us / Team</h3>
+                <div id="aboutContent">
+                    <p><strong>CodeCrafted</strong> – We build premium websites delivered in 2 days.</p>
+                    <p>Team: John (Founder), Sarah (Lead Dev), Mike (Designer)</p>
                 </div>
+                <button id="editAboutBtn" style="margin-top: 0.5rem;">Edit</button>
+            </div>
+
+            <!-- Messages Section -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <h3><i class="fas fa-envelope"></i> Customer Messages</h3>
+                <div id="messagesList">Loading...</div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Sales + Bookings -->
+        <div>
+            <div class="card">
+                <h3><i class="fas fa-chart-line"></i> Sales Overview</h3>
+                <div id="salesTotal">Loading...</div>
+                <div id="recentSales"></div>
+            </div>
+            <div class="card" style="margin-top: 1.5rem;">
+                <h3><i class="fas fa-shopping-cart"></i> Recent Bookings</h3>
+                <div id="bookingsList">Loading...</div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modals (Projects, Team, Reviews) – all identical to previous except Team modal has title and no photo -->
-<div class="modal-overlay" id="projectModal">
-    <!-- project modal unchanged -->
-</div>
-
-<div class="modal-overlay" id="teamModal">
-    <div class="modal">
-        <div class="modal-header"><h3 id="teamModalTitle">Add Team Member</h3><button class="modal-close" onclick="closeTeamModal()">✕</button></div>
-        <div class="modal-body">
-            <input type="hidden" id="teamId">
-            <div class="form-group"><label>Title</label>
-                <select id="teamTitle">
-                    <option value="">—</option>
-                    <option value="Mr.">Mr.</option>
-                    <option value="Mrs.">Mrs.</option>
-                    <option value="Ms.">Ms.</option>
-                    <option value="Dr.">Dr.</option>
-                    <option value="Prof.">Prof.</option>
-                </select>
+    <!-- Projects Section (full width) -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3><i class="fas fa-folder-open"></i> Projects Portfolio</h3>
+        <div id="projectsList" class="project-grid">Loading...</div>
+        
+        <!-- Upload New Project -->
+        <div class="upload-area">
+            <h4><i class="fas fa-upload"></i> Upload New Project</h4>
+            <input type="text" id="projectTitle" placeholder="Project title" style="width:100%; margin-bottom:0.5rem; padding:0.5rem;">
+            <textarea id="projectDesc" placeholder="Description" rows="2" style="width:100%; margin-bottom:0.5rem;"></textarea>
+            <div id="imageInputs">
+                <input type="file" accept="image/*" class="projectImage" data-index="0">
+                <input type="file" accept="image/*" class="projectImage" data-index="1">
+                <input type="file" accept="image/*" class="projectImage" data-index="2">
             </div>
-            <div class="form-group"><label>Full Name</label><input type="text" id="teamName" required></div>
-            <div class="form-group"><label>Role / Job Title</label><input type="text" id="teamRole"></div>
-            <div class="form-group"><label>Email</label><input type="email" id="teamEmail"></div>
-            <div class="form-group"><label>Bio</label><textarea id="teamBio" rows="2"></textarea></div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeTeamModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveTeamMember()">Save Member</button>
+            <div id="imagePreviews" class="image-preview"></div>
+            <button id="uploadProjectBtn" style="margin-top: 0.5rem;"><i class="fas fa-save"></i> Save Project</button>
+            <div id="uploadMessage"></div>
         </div>
     </div>
+    <footer>CodeCrafted Admin Panel</footer>
 </div>
 
 <script>
+(function() {
     const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-    const supabaseMod = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const LOGIN_URL = 'login.html';
 
-    let currentUser = null;
+    let currentSession = null;
 
-    // Ensure the moderator appears in the team_members table
-    async function ensureModeratorInTeam() {
-        if (!currentUser) return;
-        const email = currentUser.email;
-        const { data: existing } = await supabaseMod.from('team_members').select('id').eq('email', email).maybeSingle();
-        if (!existing) {
-            // Insert moderator's profile as a team member
-            const profile = currentUser;
-            await supabaseMod.from('team_members').insert({
-                name: profile.full_name || 'Team Member',
-                role: profile.role || 'Architect',
-                email: email,
-                title: '',
-                bio: '',
-                photo: ''
+    // Helper
+    function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // Auth check
+    async function checkAuth() {
+        const { data: { session }, error } = await _supabase.auth.getSession();
+        if (error || !session) {
+            window.location.href = LOGIN_URL;
+            return;
+        }
+        currentSession = session;
+        document.getElementById('adminEmail').innerText = session.user.email;
+        loadAllData();
+    }
+
+    // ---------- LOAD ALL SECTIONS ----------
+    async function loadAllData() {
+        loadMessages();
+        loadBookings();
+        loadSales();
+        loadProjects();
+    }
+
+    // Messages
+    async function loadMessages() {
+        const container = document.getElementById('messagesList');
+        const { data, error } = await _supabase.from('messages').select('*').order('created_at', { ascending: false });
+        if (error) { container.innerHTML = '<span class="error-msg">Error loading messages</span>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<p>No messages yet.</p>'; return; }
+        container.innerHTML = data.map(m => `
+            <div class="message-item">
+                <strong>${escapeHtml(m.customer_name)}</strong> (${escapeHtml(m.customer_email)})<br>
+                <small>${new Date(m.created_at).toLocaleString()}</small>
+                <p>${escapeHtml(m.message)}</p>
+                ${!m.is_read ? `<button class="mark-read" data-id="${m.id}">Mark Read</button>` : '<span class="badge">Read</span>'}
+            </div>
+        `).join('');
+        document.querySelectorAll('.mark-read').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                await _supabase.from('messages').update({ is_read: true }).eq('id', id);
+                loadMessages();
             });
-        }
+        });
     }
 
-    async function init() {
-        const { data: { session } } = await supabaseMod.auth.getSession();
-        if (!session) { window.location.href = '../login.html'; return; }
-        const { data: profile } = await supabaseMod.from('profiles').select('*').eq('id', session.user.id).single();
-        if (!profile || profile.approval_status !== 'approved') {
-            await supabaseMod.auth.signOut();
-            window.location.href = '../login.html';
-            return;
-        }
-        currentUser = profile;
-        document.getElementById('sidebarUser').textContent = profile.full_name || profile.email;
-        await ensureModeratorInTeam();
-        updateClock();
-        setInterval(updateClock, 60000);
-        navigateTo('dashboard');
+    // Bookings (existing table)
+    async function loadBookings() {
+        const container = document.getElementById('bookingsList');
+        const { data, error } = await _supabase.from('bookings').select('*, templates(name)').order('booked_at', { ascending: false }).limit(5);
+        if (error) { container.innerHTML = '<span class="error-msg">Error loading bookings</span>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<p>No bookings yet.</p>'; return; }
+        container.innerHTML = data.map(b => `
+            <div class="booking-item">
+                <strong>${escapeHtml(b.customer_name)}</strong> – ${b.templates ? escapeHtml(b.templates.name) : 'Deleted template'}<br>
+                Ref: ${b.reference_number} | Status: <span class="badge ${b.status === 'delivered' ? 'badge-delivered' : ''}">${b.status}</span>
+            </div>
+        `).join('');
     }
 
-    function updateClock() {
-        document.getElementById('clock').textContent = new Date().toLocaleString('en-US', { hour:'2-digit', minute:'2-digit', weekday:'short', month:'short', day:'numeric' });
+    // Sales summary
+    async function loadSales() {
+        const totalDiv = document.getElementById('salesTotal');
+        const recentDiv = document.getElementById('recentSales');
+        const { data, error } = await _supabase.from('sales').select('*').order('sold_at', { ascending: false });
+        if (error) { totalDiv.innerHTML = '<span class="error-msg">Error loading sales</span>'; return; }
+        const total = (data || []).reduce((sum, s) => sum + s.amount, 0);
+        totalDiv.innerHTML = `<h2>R${total.toFixed(2)}</h2><p>Total revenue</p>`;
+        const recent = (data || []).slice(0, 3);
+        recentDiv.innerHTML = recent.map(s => `<div>R${s.amount} – ${new Date(s.sold_at).toLocaleDateString()}</div>`).join('') || '<p>No recent sales</p>';
     }
 
-    function navigateTo(page) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(`page-${page}`).classList.add('active');
-        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
-        document.querySelector(`.sidebar-nav a[data-page="${page}"]`).classList.add('active');
-        document.getElementById('pageTitle').textContent = page.charAt(0).toUpperCase()+page.slice(1);
-        if (page === 'dashboard') loadDashboard();
-        else if (page === 'projects') loadProjects();
-        else if (page === 'team') loadTeam();
-        else if (page === 'reviews') loadReviews();
-        else if (page === 'messages') loadMessages();
-        else if (page === 'about') loadAbout();
-    }
-    document.querySelectorAll('.sidebar-nav a').forEach(a => a.addEventListener('click', e => navigateTo(e.target.dataset.page)));
-
-    function toast(msg, type='success') {
-        const t = document.createElement('div');
-        t.className = `toast ${type}`; t.textContent = msg;
-        document.body.appendChild(t);
-        setTimeout(() => t.remove(), 2500);
-    }
-
-    // Dashboard stats
-    async function loadDashboard() {
-        const [{ count: projects }, { count: team }, { count: reviews }, { count: messages }] = await Promise.all([
-            supabaseMod.from('projects').select('*', { count: 'exact', head: true }),
-            supabaseMod.from('team_members').select('*', { count: 'exact', head: true }),
-            supabaseMod.from('reviews').select('*', { count: 'exact', head: true }).eq('approved', true),
-            supabaseMod.from('contact_messages').select('*', { count: 'exact', head: true })
-        ]);
-        const { data: about } = await supabaseMod.from('about_us').select('*').single();
-        const years = about?.years_experience || 0;
-        document.getElementById('statsGrid').innerHTML = `
-            <div class="stat-card"><div class="stat-icon">🏗️</div><div class="stat-value">${projects||0}</div><div class="stat-label">Projects</div></div>
-            <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${team||0}</div><div class="stat-label">Team Members</div></div>
-            <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value">${reviews||0}</div><div class="stat-label">Approved Reviews</div></div>
-            <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">${years}</div><div class="stat-label">Years Exp.</div></div>
-            <div class="stat-card"><div class="stat-icon">✉️</div><div class="stat-value">${messages||0}</div><div class="stat-label">Messages</div></div>
-        `;
-        const { data: recent } = await supabaseMod.from('projects').select('*').order('created_at', { ascending: false }).limit(5);
-        document.getElementById('recentProjects').innerHTML = recent.length ? `<table><thead><tr><th>Project</th><th>Category</th><th>Status</th></tr></thead><tbody>${recent.map(p=>`<tr><td>${p.title}</td><td>${p.category}</td><td><span class="badge ${p.status==='Completed'?'badge-success':'badge-warning'}">${p.status}</span></td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">No projects yet.</div>';
-    }
-
-    // Projects CRUD (unchanged)
-    async function loadProjects() { /* same as before */ }
-    function openProjectModal(id=null) { /* same */ }
-    function closeProjectModal() { /* same */ }
-    async function saveProject() { /* same */ }
-    async function deleteProject(id) { /* same */ }
-
-    // Team Members (updated with title, no photo)
-    async function loadTeam() {
-        const { data: members } = await supabaseMod.from('team_members').select('*').order('created_at', { ascending: true });
-        const container = document.getElementById('teamTable');
-        if (!members || members.length === 0) {
-            container.innerHTML = '<div class="empty-state">No team members.</div>';
-            return;
-        }
-        container.innerHTML = `
-            <table>
-                <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Actions</th></tr></thead>
-                <tbody>
-                    ${members.map(m => {
-                        const displayName = (m.title ? m.title + ' ' : '') + m.name;
-                        return `
-                            <tr>
-                                <td><strong>${escapeHtml(displayName)}</strong></td>
-                                <td>${escapeHtml(m.role || '—')}</td>
-                                <td>${escapeHtml(m.email || '—')}</td>
-                                <td>
-                                    <button class="btn btn-secondary btn-xs" onclick="openTeamModal('${m.id}')">✏️</button>
-                                    <button class="btn btn-danger btn-xs" onclick="deleteTeam('${m.id}')">🗑️</button>
-                                </td>
-                            </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>`;
-    }
-
-    function openTeamModal(id=null) {
-        document.getElementById('teamId').value = id || '';
-        document.getElementById('teamModalTitle').textContent = id ? 'Edit Team Member' : 'Add Team Member';
-        if (id) {
-            supabaseMod.from('team_members').select('*').eq('id', id).single().then(({ data }) => {
-                if (data) {
-                    document.getElementById('teamTitle').value = data.title || '';
-                    document.getElementById('teamName').value = data.name || '';
-                    document.getElementById('teamRole').value = data.role || '';
-                    document.getElementById('teamEmail').value = data.email || '';
-                    document.getElementById('teamBio').value = data.bio || '';
+    // Projects (with images)
+    async function loadProjects() {
+        const container = document.getElementById('projectsList');
+        const { data, error } = await _supabase.from('projects').select('*').order('created_at', { ascending: false });
+        if (error) { container.innerHTML = '<span class="error-msg">Error loading projects</span>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<p>No projects yet. Upload one above.</p>'; return; }
+        container.innerHTML = data.map(p => `
+            <div class="project-card">
+                ${p.images && p.images[0] ? `<img src="${p.images[0]}" alt="${escapeHtml(p.title)}">` : '<i class="fas fa-image"></i>'}
+                <h4>${escapeHtml(p.title)}</h4>
+                <p>${escapeHtml(p.description || '')}</p>
+                <button class="delete-project" data-id="${p.id}">Delete</button>
+            </div>
+        `).join('');
+        document.querySelectorAll('.delete-project').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Delete this project?')) {
+                    const id = btn.getAttribute('data-id');
+                    await _supabase.from('projects').delete().eq('id', id);
+                    loadProjects();
                 }
             });
+        });
+    }
+
+    // Upload project with 1-3 images (using file inputs, convert to base64 or upload to Supabase Storage)
+    // For simplicity, we'll use base64 (small images). In production, use Supabase Storage.
+    async function uploadProject() {
+        const title = document.getElementById('projectTitle').value.trim();
+        const desc = document.getElementById('projectDesc').value.trim();
+        if (!title) {
+            document.getElementById('uploadMessage').innerHTML = '<span class="error-msg">Title required</span>';
+            return;
+        }
+        const fileInputs = document.querySelectorAll('.projectImage');
+        const images = [];
+        for (let i = 0; i < fileInputs.length; i++) {
+            if (fileInputs[i].files && fileInputs[i].files[0]) {
+                const file = fileInputs[i].files[0];
+                const reader = new FileReader();
+                const base64 = await new Promise((resolve) => {
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
+                images.push(base64);
+            }
+        }
+        if (images.length === 0) {
+            document.getElementById('uploadMessage').innerHTML = '<span class="error-msg">At least one image required</span>';
+            return;
+        }
+        const { error } = await _supabase.from('projects').insert({
+            title, description: desc, images: images
+        });
+        if (error) {
+            document.getElementById('uploadMessage').innerHTML = `<span class="error-msg">${error.message}</span>`;
         } else {
-            ['teamTitle','teamName','teamRole','teamEmail','teamBio'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('teamTitle').value = '';
-        }
-        document.getElementById('teamModal').classList.add('show');
-    }
-
-    function closeTeamModal() { document.getElementById('teamModal').classList.remove('show'); }
-
-    async function saveTeamMember() {
-        const id = document.getElementById('teamId').value;
-        const member = {
-            title: document.getElementById('teamTitle').value,
-            name: document.getElementById('teamName').value.trim(),
-            role: document.getElementById('teamRole').value.trim(),
-            email: document.getElementById('teamEmail').value.trim(),
-            bio: document.getElementById('teamBio').value.trim(),
-        };
-        if (!member.name) return toast('Name is required', 'error');
-        let error;
-        if (id) error = (await supabaseMod.from('team_members').update(member).eq('id', id)).error;
-        else error = (await supabaseMod.from('team_members').insert(member)).error;
-        if (error) toast(error.message, 'error');
-        else { closeTeamModal(); loadTeam(); loadDashboard(); toast(id ? 'Member updated' : 'Member added'); }
-    }
-
-    async function deleteTeam(id) {
-        if (!confirm('Remove this member?')) return;
-        await supabaseMod.from('team_members').delete().eq('id', id);
-        loadTeam(); loadDashboard(); toast('Member removed');
-    }
-
-    // Reviews (approve/delete)
-    async function loadReviews() {
-        const { data } = await supabaseMod.from('reviews').select('*').order('created_at', { ascending: false });
-        const container = document.getElementById('reviewsTable');
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div class="empty-state">No reviews yet.</div>';
-            return;
-        }
-        container.innerHTML = `
-            <table>
-                <thead><tr><th>Client</th><th>Rating</th><th>Text</th><th>Approved</th><th>Actions</th></tr></thead>
-                <tbody>
-                    ${data.map(r => `
-                        <tr>
-                            <td>${escapeHtml(r.client)}</td>
-                            <td>${'⭐'.repeat(r.rating)}</td>
-                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.text)}</td>
-                            <td><span class="badge ${r.approved ? 'badge-success' : 'badge-warning'}">${r.approved ? 'Yes' : 'No'}</span></td>
-                            <td>
-                                <button class="btn btn-xs ${r.approved ? 'btn-danger' : 'btn-primary'}" onclick="toggleReview('${r.id}')">${r.approved ? 'Unapprove' : 'Approve'}</button>
-                                <button class="btn btn-danger btn-xs" onclick="deleteReview('${r.id}')">🗑️</button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>`;
-    }
-    async function toggleReview(id) {
-        const { data } = await supabaseMod.from('reviews').select('approved').eq('id', id).single();
-        await supabaseMod.from('reviews').update({ approved: !data.approved }).eq('id', id);
-        loadReviews(); loadDashboard();
-    }
-    async function deleteReview(id) {
-        if (!confirm('Delete review?')) return;
-        await supabaseMod.from('reviews').delete().eq('id', id);
-        loadReviews(); loadDashboard(); toast('Review deleted');
-    }
-
-    // Messages (read/delete)
-    async function loadMessages() {
-        const { data: messages } = await supabaseMod.from('contact_messages').select('*').order('created_at', { ascending: false });
-        const container = document.getElementById('messagesTable');
-        if (!messages || messages.length === 0) {
-            container.innerHTML = '<div class="empty-state">No messages yet.</div>';
-            return;
-        }
-        container.innerHTML = `
-            <table>
-                <thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th><th>Actions</th></tr></thead>
-                <tbody>
-                    ${messages.map(m => `
-                        <tr>
-                            <td><strong>${escapeHtml(m.name)}</strong></td>
-                            <td>${escapeHtml(m.email)}</td>
-                            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.message)}</td>
-                            <td>${new Date(m.created_at).toLocaleDateString()}</td>
-                            <td><button class="btn btn-danger btn-xs" onclick="deleteMessage('${m.id}')">🗑️</button></td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>`;
-    }
-    async function deleteMessage(id) {
-        if (!confirm('Delete message?')) return;
-        await supabaseMod.from('contact_messages').delete().eq('id', id);
-        loadMessages(); loadDashboard(); toast('Message deleted');
-    }
-
-    // About Us
-    async function loadAbout() {
-        const { data } = await supabaseMod.from('about_us').select('*').single();
-        if (data) {
-            document.getElementById('aboutContent').value = data.content || '';
-            document.getElementById('missionContent').value = data.mission || '';
-            document.getElementById('yearsExperience').value = data.years_experience || '';
-            document.getElementById('projectsCompleted').value = data.projects_completed || '';
-        }
-    }
-    async function saveAbout() {
-        const about = {
-            content: document.getElementById('aboutContent').value,
-            mission: document.getElementById('missionContent').value,
-            years_experience: parseInt(document.getElementById('yearsExperience').value) || 0,
-            projects_completed: parseInt(document.getElementById('projectsCompleted').value) || 0,
-        };
-        const { error } = await supabaseMod.from('about_us').upsert({ id: 1, ...about });
-        if (error) toast(error.message, 'error');
-        else {
-            document.getElementById('aboutSaveStatus').style.display = 'inline';
-            setTimeout(() => document.getElementById('aboutSaveStatus').style.display = 'none', 2000);
-            toast('About saved');
+            document.getElementById('uploadMessage').innerHTML = '<span class="success-msg">Project uploaded!</span>';
+            document.getElementById('projectTitle').value = '';
+            document.getElementById('projectDesc').value = '';
+            document.querySelectorAll('.projectImage').forEach(inp => inp.value = '');
+            document.getElementById('imagePreviews').innerHTML = '';
+            loadProjects();
+            setTimeout(() => { document.getElementById('uploadMessage').innerHTML = ''; }, 3000);
         }
     }
 
-    function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str || ''; return div.innerHTML; }
-    async function logout() { await supabaseMod.auth.signOut(); window.location.href = '../login.html'; }
+    // Image previews
+    function setupImagePreviews() {
+        const inputs = document.querySelectorAll('.projectImage');
+        const previewDiv = document.getElementById('imagePreviews');
+        inputs.forEach((input, idx) => {
+            input.addEventListener('change', () => {
+                previewDiv.innerHTML = '';
+                inputs.forEach(inp => {
+                    if (inp.files && inp.files[0]) {
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(inp.files[0]);
+                        previewDiv.appendChild(img);
+                    }
+                });
+            });
+        });
+    }
 
-    document.getElementById('projectModal')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeProjectModal(); });
-    document.getElementById('teamModal')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeTeamModal(); });
+    // Edit About Us (simple prompt, save to localStorage or Supabase settings)
+    function editAbout() {
+        const current = document.getElementById('aboutContent').innerText;
+        const newText = prompt('Edit About Us / Team content:', current);
+        if (newText) {
+            document.getElementById('aboutContent').innerHTML = newText.replace(/\n/g, '<br>');
+            // Optional: save to Supabase settings table (you can add later)
+        }
+    }
 
-    init();
+    // Logout
+    async function logout() {
+        await _supabase.auth.signOut();
+        window.location.href = LOGIN_URL;
+    }
+
+    // Event listeners
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('editAboutBtn').addEventListener('click', editAbout);
+    document.getElementById('uploadProjectBtn').addEventListener('click', uploadProject);
+    setupImagePreviews();
+
+    checkAuth();
+})();
 </script>
 </body>
 </html>
