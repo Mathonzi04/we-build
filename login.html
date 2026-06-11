@@ -258,6 +258,9 @@
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // IMPORTANT: Your GitHub Pages URL – where the reset link will redirect to
+        const REDIRECT_URL = 'https://mathonzi04.github.io/we-build/login.html';
+
         // DOM elements
         const loginCard = document.getElementById('loginCard');
         const resetCard = document.getElementById('resetCard');
@@ -335,7 +338,7 @@
             showLoginMessage('Logged out successfully', false);
         }
 
-        // Forgot password: send reset email
+        // Forgot password: send reset email to the FIXED GitHub Pages URL
         async function sendResetEmail() {
             const email = resetEmailInput.value.trim();
             if (!email) {
@@ -345,7 +348,7 @@
             sendResetBtn.disabled = true;
             sendResetBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sending...';
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + window.location.pathname,
+                redirectTo: REDIRECT_URL,
             });
             sendResetBtn.disabled = false;
             sendResetBtn.innerHTML = '<i class="fas fa-envelope"></i> Send';
@@ -360,25 +363,18 @@
             }
         }
 
-        // Handle password reset (when user clicks link from email)
+        // Handle recovery mode when user clicks reset link from email
         async function handleRecoveryMode() {
-            // Check if URL contains recovery hash
             const hash = window.location.hash;
             if (hash && hash.includes('type=recovery')) {
-                // Hide login card, show reset card
                 loginCard.style.display = 'none';
                 resetCard.style.display = 'block';
                 dashboardDiv.style.display = 'none';
-                // Clear any previous messages
                 resetMessageDiv.innerHTML = '';
-                // Also, we need to ensure Supabase session is established with the recovery token
-                // Supabase automatically exchanges the hash tokens, we just need to get the session
+                // Ensure session is active with the recovery token
                 const { data: { session }, error } = await supabaseClient.auth.getSession();
                 if (error || !session) {
                     showResetMessage('Invalid or expired reset link. Please request a new one.', true);
-                } else {
-                    // We have a valid session in recovery mode, ready to update password
-                    console.log('Recovery session active');
                 }
             }
         }
@@ -409,23 +405,18 @@
                 return;
             }
             showResetMessage('Password updated successfully! Redirecting to login...', false);
-            // Sign out to clear recovery session
             await supabaseClient.auth.signOut();
-            // Clear URL hash
             window.location.hash = '';
-            // Redirect to login after 2 seconds
             setTimeout(() => {
                 resetCard.style.display = 'none';
                 loginCard.style.display = 'block';
                 dashboardDiv.style.display = 'none';
-                // Clear password fields
                 newPasswordInput.value = '';
                 confirmPasswordInput.value = '';
                 showLoginMessage('Password changed. Please log in with your new password.', false);
             }, 2000);
         }
 
-        // Back to login from reset card
         function backToLogin() {
             window.location.hash = '';
             supabaseClient.auth.signOut();
@@ -447,11 +438,10 @@
         resetPasswordBtn.addEventListener('click', updatePassword);
         backToLoginFromReset.addEventListener('click', backToLogin);
 
-        // Check for existing session (normal login)
+        // Check existing session
         async function checkExistingSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session && !window.location.hash.includes('type=recovery')) {
-                // Normal session, show dashboard
                 loginCard.style.display = 'none';
                 dashboardDiv.style.display = 'block';
                 adminEmailDisplay.textContent = session.user.email;
@@ -459,14 +449,11 @@
                 loginCard.style.display = 'block';
                 dashboardDiv.style.display = 'none';
             }
-            // Check for recovery mode regardless
             await handleRecoveryMode();
         }
 
-        // Listen to auth changes to handle recovery scenario
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session) {
-                // If we are in recovery mode, do NOT show dashboard; we want reset form
                 const isRecovery = window.location.hash.includes('type=recovery');
                 if (!isRecovery) {
                     loginCard.style.display = 'none';
@@ -474,7 +461,6 @@
                     adminEmailDisplay.textContent = session.user.email;
                     resetCard.style.display = 'none';
                 } else {
-                    // Already handled by handleRecoveryMode, but ensure reset card is visible
                     loginCard.style.display = 'none';
                     resetCard.style.display = 'block';
                     dashboardDiv.style.display = 'none';
