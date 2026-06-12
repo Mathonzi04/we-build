@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Services | Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: #f0f4f8; padding: 1.5rem; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .header { background: white; border-radius: 1rem; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .logout-btn { background: #e53e3e; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 2rem; cursor: pointer; }
+        .card { background: white; border-radius: 1rem; padding: 1.2rem; margin-bottom: 1rem; }
+        .service-item { border-bottom: 1px solid #e2e8f0; padding: 1rem 0; }
+        .badge { background: #e2e8f0; padding: 0.2rem 0.6rem; border-radius: 2rem; font-size: 0.75rem; }
+        .badge-disabled { background: #fed7d7; color: #c53030; }
+        .btn { background: #1e2a47; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 0.5rem; cursor: pointer; margin-right: 0.5rem; }
+        .btn-danger { background: #e53e3e; }
+        .btn-warning { background: #dd6b20; }
+        .alert-area { margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; }
+        .alert-area input { flex: 1; padding: 0.4rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2><i class="fas fa-chalkboard"></i> Active Services</h2>
+        <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+    <div id="servicesContainer">Loading...</div>
+</div>
+
+<script>
+(function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const LOGIN_URL = 'https://mathonzi04.github.io/we-build/login.html';
+
+    async function checkAuth() {
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (!session) window.location.href = LOGIN_URL;
+    }
+
+    function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    async function loadActiveServices() {
+        const container = document.getElementById('servicesContainer');
+        const { data, error } = await _supabase.from('bookings').select('*').in('website_status', ['active', 'disabled']).order('booked_at', { ascending: false });
+        if (error) { container.innerHTML = '<div class="card error-msg">Error loading services</div>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<div class="card">No active services yet.</div>'; return; }
+        container.innerHTML = data.map(b => `
+            <div class="card service-item">
+                <div><strong>${escapeHtml(b.customer_name)}</strong> (${escapeHtml(b.customer_email)})</div>
+                <div>Reference: <code>${b.reference_number}</code></div>
+                <div>Website: ${b.website_url ? `<a href="${b.website_url}" target="_blank">${b.website_url}</a>` : 'Not set'}</div>
+                <div>Status: <span class="badge ${b.website_status === 'disabled' ? 'badge-disabled' : ''}">${b.website_status}</span></div>
+                ${b.disable_reason ? `<div>Reason: ${escapeHtml(b.disable_reason)}</div>` : ''}
+                <div class="alert-area">
+                    <input type="text" id="alertMsg-${b.id}" placeholder="Monthly fee alert message...">
+                    <button class="send-alert btn" data-id="${b.id}" data-email="${b.customer_email}" data-name="${b.customer_name}">Send Alert</button>
+                </div>
+                <div style="margin-top:0.5rem;">
+                    ${b.website_status !== 'disabled' ? `<button class="disable-service btn-danger" data-id="${b.id}">Disable Dashboard</button>` : `<button class="enable-service btn" data-id="${b.id}">Re-enable Dashboard</button>`}
+                </div>
+            </div>
+        `).join('');
+        // Send alert (email simulation – opens mail client)
+        document.querySelectorAll('.send-alert').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const email = btn.dataset.email;
+                const name = btn.dataset.name;
+                const customMsg = document.getElementById(`alertMsg-${btn.dataset.id}`).value;
+                const subject = encodeURIComponent('Monthly Fee Reminder - CodeCrafted');
+                const body = encodeURIComponent(`Hi ${name},\n\n${customMsg || 'Your monthly fee is due. Please make payment to keep your dashboard active.'}\n\nThank you.`);
+                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+                // Optionally log alert in payment_alerts table
+                _supabase.from('payment_alerts').insert({ booking_id: btn.dataset.id, alert_type: 'monthly_due' });
+            });
+        });
+        document.querySelectorAll('.disable-service').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reason = prompt('Reason for disabling dashboard:');
+                if (reason) {
+                    await _supabase.from('bookings').update({ website_status: 'disabled', disable_reason: reason }).eq('id', btn.dataset.id);
+                    loadActiveServices();
+                }
+            });
+        });
+        document.querySelectorAll('.enable-service').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await _supabase.from('bookings').update({ website_status: 'active', disable_reason: null }).eq('id', btn.dataset.id);
+                loadActiveServices();
+            });
+        });
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => { await _supabase.auth.signOut(); window.location.href = LOGIN_URL; });
+    checkAuth();
+    loadActiveServices();
+})();
+</script>
+</body>
+</html>

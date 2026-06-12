@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us | Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        body {
+            background: #f0f4f8;
+            padding: 1.5rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .logout-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .card h2 {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .team-card {
+            background: #f7fafc;
+            border-radius: 1rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        .team-card img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
+        }
+        .btn {
+            background: #1e2a47;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            margin: 0.2rem;
+        }
+        .btn-danger {
+            background: #e53e3e;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 0.5rem;
+        }
+        .story-content {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            white-space: pre-wrap;
+        }
+        .error-msg { color: #e53e3e; }
+        .success-msg { color: #2f855a; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background: white;
+            max-width: 500px;
+            width: 90%;
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2><i class="fas fa-users"></i> About Us Management</h2>
+        <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+
+    <!-- Our Story Section -->
+    <div class="card">
+        <h2><i class="fas fa-book-open"></i> Our Story</h2>
+        <div id="storyDisplay" class="story-content">Loading...</div>
+        <button id="editStoryBtn" class="btn" style="margin-top: 1rem;"><i class="fas fa-edit"></i> Edit Story</button>
+    </div>
+
+    <!-- Team Members Section -->
+    <div class="card">
+        <h2><i class="fas fa-user-friends"></i> Team Members</h2>
+        <button id="addMemberBtn" class="btn"><i class="fas fa-plus"></i> Add Team Member</button>
+        <div id="teamContainer" class="team-grid">Loading...</div>
+    </div>
+</div>
+
+<!-- Modal for Add/Edit Team Member -->
+<div id="memberModal" class="modal">
+    <div class="modal-card">
+        <h3 id="modalTitle">Add Team Member</h3>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="memberName">
+        </div>
+        <div class="form-group">
+            <label>Role</label>
+            <input type="text" id="memberRole">
+        </div>
+        <div class="form-group">
+            <label>Bio</label>
+            <textarea id="memberBio" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Profile Picture (optional)</label>
+            <input type="file" id="memberImage" accept="image/*">
+            <div id="imagePreview"></div>
+        </div>
+        <input type="hidden" id="editMemberId">
+        <button id="saveMemberBtn" class="btn">Save</button>
+        <button id="closeModalBtn" class="btn btn-danger">Cancel</button>
+        <div id="modalMessage"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const LOGIN_URL = 'https://mathonzi04.github.io/we-build/login.html';
+    const DASHBOARD_URL = 'https://mathonzi04.github.io/we-build/dashboard.html';
+
+    let currentSession = null;
+
+    // Helper: escape HTML
+    function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // Auth check
+    async function checkAuth() {
+        const { data: { session }, error } = await _supabase.auth.getSession();
+        if (error || !session) { window.location.href = LOGIN_URL; return; }
+        currentSession = session;
+        loadStory();
+        loadTeamMembers();
+    }
+
+    // ---------- Our Story (store in a simple settings table or localStorage? Let's use a 'site_settings' table for simplicity) ----------
+    // We'll create a simple 'site_settings' table if not exists.
+    async function loadStory() {
+        const container = document.getElementById('storyDisplay');
+        // Check if table exists – we'll create it on the fly or use a default.
+        let { data, error } = await _supabase.from('site_settings').select('value').eq('key', 'our_story').single();
+        if (error && error.code !== 'PGRST116') { // table might not exist
+            // Create table silently? We'll just use localStorage fallback
+            let story = localStorage.getItem('our_story') || 'CodeCrafted was founded in 2020 with a mission to deliver high-quality websites within 2 days. We believe in craftsmanship and customer satisfaction.';
+            container.innerText = story;
+            return;
+        }
+        if (data) container.innerText = data.value;
+        else container.innerText = 'CodeCrafted – Your digital partner. We build stunning websites fast.';
+    }
+
+    async function saveStory(story) {
+        // Try to save to Supabase if table exists, else localStorage
+        const { error } = await _supabase.from('site_settings').upsert({ key: 'our_story', value: story }, { onConflict: 'key' });
+        if (error) localStorage.setItem('our_story', story);
+        loadStory();
+    }
+
+    document.getElementById('editStoryBtn').addEventListener('click', () => {
+        const current = document.getElementById('storyDisplay').innerText;
+        const newStory = prompt('Edit Our Story:', current);
+        if (newStory && newStory !== current) saveStory(newStory);
+    });
+
+    // ---------- Team Members ----------
+    async function loadTeamMembers() {
+        const container = document.getElementById('teamContainer');
+        const { data, error } = await _supabase.from('team_members').select('*').order('display_order', { ascending: true });
+        if (error) { container.innerHTML = '<span class="error-msg">Error loading team</span>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<p>No team members added yet.</p>'; return; }
+        container.innerHTML = data.map(m => `
+            <div class="team-card">
+                ${m.profile_image ? `<img src="${m.profile_image}" alt="${escapeHtml(m.name)}">` : '<i class="fas fa-user-circle" style="font-size: 4rem;"></i>'}
+                <h3>${escapeHtml(m.name)}</h3>
+                <p><strong>${escapeHtml(m.role)}</strong></p>
+                <p>${escapeHtml(m.bio || '')}</p>
+                <button class="edit-member btn" data-id="${m.id}" data-name="${escapeHtml(m.name)}" data-role="${escapeHtml(m.role)}" data-bio="${escapeHtml(m.bio || '')}" data-image="${m.profile_image || ''}">Edit</button>
+                <button class="delete-member btn btn-danger" data-id="${m.id}">Delete</button>
+            </div>
+        `).join('');
+        document.querySelectorAll('.edit-member').forEach(btn => {
+            btn.addEventListener('click', () => openModal(btn.dataset));
+        });
+        document.querySelectorAll('.delete-member').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Delete this team member?')) {
+                    await _supabase.from('team_members').delete().eq('id', btn.dataset.id);
+                    loadTeamMembers();
+                }
+            });
+        });
+    }
+
+    const modal = document.getElementById('memberModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const memberName = document.getElementById('memberName');
+    const memberRole = document.getElementById('memberRole');
+    const memberBio = document.getElementById('memberBio');
+    const memberImage = document.getElementById('memberImage');
+    const imagePreview = document.getElementById('imagePreview');
+    const editMemberId = document.getElementById('editMemberId');
+    const saveMemberBtn = document.getElementById('saveMemberBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    function openModal(data = null) {
+        modalTitle.innerText = data && data.id ? 'Edit Team Member' : 'Add Team Member';
+        memberName.value = data?.name || '';
+        memberRole.value = data?.role || '';
+        memberBio.value = data?.bio || '';
+        editMemberId.value = data?.id || '';
+        imagePreview.innerHTML = '';
+        if (data?.image) {
+            const img = document.createElement('img');
+            img.src = data.image;
+            img.style.width = '80px';
+            img.style.borderRadius = '50%';
+            imagePreview.appendChild(img);
+        }
+        modal.style.display = 'flex';
+    }
+
+    async function saveMember() {
+        const name = memberName.value.trim();
+        const role = memberRole.value.trim();
+        const bio = memberBio.value.trim();
+        if (!name || !role) {
+            document.getElementById('modalMessage').innerHTML = '<span class="error-msg">Name and role required</span>';
+            return;
+        }
+        let profile_image = null;
+        if (memberImage.files && memberImage.files[0]) {
+            const file = memberImage.files[0];
+            const reader = new FileReader();
+            profile_image = await new Promise(resolve => {
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(file);
+            });
+        } else if (editMemberId.value && document.querySelector('.edit-member[data-id="'+editMemberId.value+'"]')?.dataset.image) {
+            profile_image = document.querySelector('.edit-member[data-id="'+editMemberId.value+'"]').dataset.image;
+        }
+        const memberData = { name, role, bio, profile_image, display_order: 0 };
+        if (editMemberId.value) {
+            await _supabase.from('team_members').update(memberData).eq('id', editMemberId.value);
+        } else {
+            await _supabase.from('team_members').insert(memberData);
+        }
+        modal.style.display = 'none';
+        memberImage.value = '';
+        editMemberId.value = '';
+        loadTeamMembers();
+    }
+
+    document.getElementById('addMemberBtn').addEventListener('click', () => openModal());
+    saveMemberBtn.addEventListener('click', saveMember);
+    closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+    window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await _supabase.auth.signOut();
+        window.location.href = LOGIN_URL;
+    });
+
+    checkAuth();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages & Reviews | Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: #f0f4f8; padding: 1.5rem; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .header { background: white; border-radius: 1rem; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .logout-btn { background: #e53e3e; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 2rem; cursor: pointer; }
+        .tabs { display: flex; gap: 1rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 1.5rem; background: white; border-radius: 1rem 1rem 0 0; padding: 0 1rem; }
+        .tab-btn { background: none; border: none; padding: 1rem 1.5rem; font-weight: 600; cursor: pointer; }
+        .tab-btn.active { color: #1e2a47; border-bottom: 3px solid #1e2a47; }
+        .panel { display: none; }
+        .card { background: white; border-radius: 1rem; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .badge { background: #e2e8f0; padding: 0.2rem 0.6rem; border-radius: 2rem; font-size: 0.75rem; }
+        .badge-new { background: #fed7d7; color: #c53030; }
+        .badge-attended { background: #feebc8; color: #c05621; }
+        .badge-closed { background: #c6f6d5; color: #22543d; }
+        .rating-stars i { color: #fbbf24; }
+        button { background: #1e2a47; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 0.5rem; cursor: pointer; margin-right: 0.5rem; }
+        .reply-area { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+        .reply-area input { flex: 1; padding: 0.4rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; }
+        .error-msg { color: #e53e3e; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2><i class="fas fa-inbox"></i> Messages & Reviews</h2>
+        <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="reviews">Review Approvals</button>
+        <button class="tab-btn" data-tab="client">Client Messages</button>
+        <button class="tab-btn" data-tab="service">Service Messages</button>
+    </div>
+
+    <!-- Panel 1: Review Approvals -->
+    <div id="reviewsPanel" class="panel" style="display:block;">
+        <div class="card"><p>Loading reviews...</p></div>
+    </div>
+
+    <!-- Panel 2: Client Messages (contact form) -->
+    <div id="clientPanel" class="panel">
+        <div class="card"><p>Loading client messages...</p></div>
+    </div>
+
+    <!-- Panel 3: Service Messages (for clients who bought service) -->
+    <div id="servicePanel" class="panel">
+        <div class="card"><p>Loading service messages...</p></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const LOGIN_URL = 'https://mathonzi04.github.io/we-build/login.html';
+
+    async function checkAuth() {
+        const { data: { session } } = await _supabase.auth.getSession();
+        if (!session) window.location.href = LOGIN_URL;
+    }
+
+    // ---------- 1. Reviews (approval) ----------
+    async function loadReviews() {
+        const container = document.getElementById('reviewsPanel');
+        const { data, error } = await _supabase.from('reviews').select('*').order('created_at', { ascending: false });
+        if (error) { container.innerHTML = '<div class="card error-msg">Error loading reviews</div>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<div class="card">No reviews yet.</div>'; return; }
+        container.innerHTML = data.map(r => `
+            <div class="card">
+                <div><strong>${escapeHtml(r.customer_name)}</strong> <span class="rating-stars">${'<i class="fas fa-star"></i>'.repeat(r.rating)}${'<i class="far fa-star"></i>'.repeat(5-r.rating)}</span></div>
+                <p>${escapeHtml(r.comment)}</p>
+                <small>${new Date(r.created_at).toLocaleString()}</small>
+                <div style="margin-top:0.5rem;">
+                    ${!r.is_approved ? `<button class="approve-review" data-id="${r.id}">Approve</button>` : '<span class="badge">Approved</span>'}
+                    <button class="delete-review" data-id="${r.id}">Delete</button>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.approve-review').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await _supabase.from('reviews').update({ is_approved: true }).eq('id', btn.dataset.id);
+                loadReviews();
+            });
+        });
+        document.querySelectorAll('.delete-review').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Delete this review?')) {
+                    await _supabase.from('reviews').delete().eq('id', btn.dataset.id);
+                    loadReviews();
+                }
+            });
+        });
+    }
+
+    // ---------- 2. Client Messages (contact form) ----------
+    async function loadClientMessages() {
+        const container = document.getElementById('clientPanel');
+        const { data, error } = await _supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
+        if (error) { container.innerHTML = '<div class="card error-msg">Error loading messages</div>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<div class="card">No client messages.</div>'; return; }
+        container.innerHTML = data.map(m => `
+            <div class="card">
+                <div><strong>${escapeHtml(m.customer_name)}</strong> (${escapeHtml(m.customer_email)})</div>
+                <div><strong>Subject:</strong> ${escapeHtml(m.subject || 'No subject')}</div>
+                <p>${escapeHtml(m.message)}</p>
+                <small>${new Date(m.created_at).toLocaleString()}</small>
+                <div style="margin-top:0.5rem;">
+                    <span class="badge ${m.status === 'new' ? 'badge-new' : (m.status === 'attended' ? 'badge-attended' : 'badge-closed')}">${m.status}</span>
+                    ${m.status !== 'attended' ? `<button class="mark-attended" data-id="${m.id}">Mark Attended</button>` : ''}
+                    ${m.status !== 'closed' ? `<button class="mark-closed" data-id="${m.id}">Mark Closed</button>` : ''}
+                    <button class="delete-message" data-id="${m.id}">Delete</button>
+                </div>
+                ${m.admin_note ? `<div><small>Admin note: ${escapeHtml(m.admin_note)}</small></div>` : ''}
+                <div class="reply-area">
+                    <input type="text" id="note-${m.id}" placeholder="Add admin note...">
+                    <button class="add-note" data-id="${m.id}">Add Note</button>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.mark-attended').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await _supabase.from('contact_messages').update({ status: 'attended' }).eq('id', btn.dataset.id);
+                loadClientMessages();
+            });
+        });
+        document.querySelectorAll('.mark-closed').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await _supabase.from('contact_messages').update({ status: 'closed' }).eq('id', btn.dataset.id);
+                loadClientMessages();
+            });
+        });
+        document.querySelectorAll('.add-note').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const note = document.getElementById(`note-${id}`).value;
+                if (note) {
+                    await _supabase.from('contact_messages').update({ admin_note: note }).eq('id', id);
+                    loadClientMessages();
+                }
+            });
+        });
+        document.querySelectorAll('.delete-message').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Delete this message?')) {
+                    await _supabase.from('contact_messages').delete().eq('id', btn.dataset.id);
+                    loadClientMessages();
+                }
+            });
+        });
+    }
+
+    // ---------- 3. Service Messages (clients who bought service) ----------
+    async function loadServiceMessages() {
+        const container = document.getElementById('servicePanel');
+        const { data, error } = await _supabase.from('service_messages').select('*').order('created_at', { ascending: false });
+        if (error) { container.innerHTML = '<div class="card error-msg">Error loading service messages</div>'; return; }
+        if (!data || data.length === 0) { container.innerHTML = '<div class="card">No service messages.</div>'; return; }
+        container.innerHTML = data.map(m => `
+            <div class="card">
+                <div><strong>${escapeHtml(m.client_name)}</strong> (${escapeHtml(m.client_email)})</div>
+                ${m.booking_reference ? `<div><strong>Booking Ref:</strong> ${escapeHtml(m.booking_reference)}</div>` : ''}
+                <p><strong>Message:</strong> ${escapeHtml(m.message)}</p>
+                ${m.admin_reply ? `<div><strong>Your reply:</strong> ${escapeHtml(m.admin_reply)}</div>` : ''}
+                <small>${new Date(m.created_at).toLocaleString()}</small>
+                <div style="margin-top:0.5rem;">
+                    <span class="badge">${m.status}</span>
+                    ${!m.admin_reply ? `<button class="reply-service" data-id="${m.id}">Reply</button>` : ''}
+                    <button class="delete-service" data-id="${m.id}">Delete</button>
+                </div>
+                <div class="reply-area" id="reply-area-${m.id}" style="display:none;">
+                    <input type="text" id="reply-text-${m.id}" placeholder="Type your reply...">
+                    <button class="send-reply" data-id="${m.id}">Send Reply</button>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.reply-service').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const area = document.getElementById(`reply-area-${btn.dataset.id}`);
+                area.style.display = area.style.display === 'none' ? 'flex' : 'none';
+            });
+        });
+        document.querySelectorAll('.send-reply').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const reply = document.getElementById(`reply-text-${id}`).value;
+                if (reply) {
+                    await _supabase.from('service_messages').update({ admin_reply: reply, status: 'replied' }).eq('id', id);
+                    loadServiceMessages();
+                }
+            });
+        });
+        document.querySelectorAll('.delete-service').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Delete this service message?')) {
+                    await _supabase.from('service_messages').delete().eq('id', btn.dataset.id);
+                    loadServiceMessages();
+                }
+            });
+        });
+    }
+
+    function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = {
+        reviews: document.getElementById('reviewsPanel'),
+        client: document.getElementById('clientPanel'),
+        service: document.getElementById('servicePanel')
+    };
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            Object.keys(panels).forEach(p => panels[p].style.display = 'none');
+            panels[tab].style.display = 'block';
+            if (tab === 'reviews') loadReviews();
+            else if (tab === 'client') loadClientMessages();
+            else if (tab === 'service') loadServiceMessages();
+        });
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await _supabase.auth.signOut();
+        window.location.href = LOGIN_URL;
+    });
+
+    checkAuth();
+    loadReviews(); // default tab
+})();
+</script>
+</body>
+</html>
