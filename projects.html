@@ -20,13 +20,13 @@
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; }
         .image-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
         .image-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 0.5rem; border: 1px solid #ccc; }
-        .main-badge { background: #2f855a; color: white; padding: 0.2rem 0.4rem; border-radius: 0.3rem; font-size: 0.7rem; }
         .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
         .project-card { background: #f7fafc; border-radius: 1rem; padding: 1rem; }
         .project-card img { width: 100%; height: 150px; object-fit: cover; border-radius: 0.5rem; margin-bottom: 0.5rem; }
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-card { background: white; max-width: 600px; width: 90%; border-radius: 1rem; padding: 1.5rem; max-height: 80vh; overflow-y: auto; }
-        .error-msg { color: #e53e3e; }
+        .error-msg { color: #e53e3e; background: #fed7d7; padding: 0.5rem; border-radius: 0.5rem; }
+        .success-msg { color: #2f855a; background: #c6f6d5; padding: 0.5rem; border-radius: 0.5rem; }
     </style>
 </head>
 <body>
@@ -41,20 +41,20 @@
     </div>
 </div>
 
-<!-- Modal for Add/Edit Project -->
+<!-- Modal for Project -->
 <div id="projectModal" class="modal">
     <div class="modal-card">
         <h3 id="modalTitle">Add Project</h3>
         <div class="form-group"><label>Project Name *</label><input type="text" id="projectName"></div>
-        <div class="form-group"><label>Type (e.g., E-commerce, Portfolio, SaaS)</label><input type="text" id="projectType"></div>
+        <div class="form-group"><label>Type (e.g., E-commerce, Portfolio)</label><input type="text" id="projectType"></div>
         <div class="form-group"><label>Price (USD)</label><input type="number" id="priceUSD" step="0.01"></div>
         <div class="form-group"><label>Price (ZAR)</label><input type="number" id="priceZAR" step="0.01"></div>
         <div class="form-group"><label>Description</label><textarea id="projectDesc" rows="3"></textarea></div>
-        <div class="form-group"><label>Links / Options (comma separated URLs or text)</label><input type="text" id="projectLinks" placeholder="https://demo.com, https://github.com/..."></div>
-        <div class="form-group"><label>Images (up to 3, first one is main)</label>
-            <input type="file" id="img0" accept="image/*"><label>Main image</label>
-            <input type="file" id="img1" accept="image/*"><label>Extra 1</label>
-            <input type="file" id="img2" accept="image/*"><label>Extra 2</label>
+        <div class="form-group"><label>Links (comma separated)</label><input type="text" id="projectLinks" placeholder="https://demo.com, https://github.com/..."></div>
+        <div class="form-group"><label>Images (up to 3, first is main)</label>
+            <input type="file" id="img0" accept="image/*"><small> Main image</small><br>
+            <input type="file" id="img1" accept="image/*"><small> Extra 1</small><br>
+            <input type="file" id="img2" accept="image/*"><small> Extra 2</small>
         </div>
         <div id="imagePreviews" class="image-row"></div>
         <input type="hidden" id="editProjectId">
@@ -65,61 +65,78 @@
 </div>
 
 <script>
-(function() {
+(async function() {
     const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
     const LOGIN_URL = 'https://mathonzi04.github.io/we-build/login.html';
-
-    async function checkAuth() {
-        const { data: { session } } = await _supabase.auth.getSession();
-        if (!session) window.location.href = LOGIN_URL;
-    }
+    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function showError(container, msg) { container.innerHTML = `<div class="error-msg">${msg}</div>`; }
+
+    // Auth
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) { window.location.href = LOGIN_URL; return; }
 
     async function loadProjects() {
         const container = document.getElementById('projectsList');
-        const { data, error } = await _supabase.from('projects').select('*').order('created_at', { ascending: false });
-        if (error) { container.innerHTML = '<p class="error-msg">Error loading projects</p>'; return; }
-        if (!data || data.length === 0) { container.innerHTML = '<p>No projects yet. Click "Add New Project".</p>'; return; }
-        container.innerHTML = data.map(p => {
-            const images = p.images || [];
-            const mainImg = images[0] ? `<img src="${images[0]}" alt="${escapeHtml(p.title)}">` : '<i class="fas fa-image"></i>';
-            return `
-                <div class="project-card">
-                    ${mainImg}
-                    <h3>${escapeHtml(p.title)}</h3>
-                    <p><strong>${escapeHtml(p.type || '')}</strong></p>
-                    <p>USD $${p.price_usd || 0} / ZAR R${p.price_zar || 0}</p>
-                    <p>${escapeHtml(p.description || '').substring(0, 80)}...</p>
-                    <button class="edit-project btn" data-id="${p.id}">Edit</button>
-                    <button class="delete-project btn btn-danger" data-id="${p.id}">Delete</button>
-                </div>
-            `;
-        }).join('');
-        document.querySelectorAll('.edit-project').forEach(btn => btn.addEventListener('click', () => openModal(btn.dataset.id)));
-        document.querySelectorAll('.delete-project').forEach(btn => btn.addEventListener('click', async () => {
-            if (confirm('Delete this project?')) {
-                await _supabase.from('projects').delete().eq('id', btn.dataset.id);
-                loadProjects();
+        try {
+            const { data, error } = await _supabase.from('projects').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p>No projects yet. Click "Add New Project".</p>';
+                return;
             }
-        }));
+            container.innerHTML = data.map(p => {
+                const images = p.images || [];
+                const mainImg = images[0] ? `<img src="${images[0]}" alt="${escapeHtml(p.title)}">` : '<i class="fas fa-image" style="font-size: 3rem;"></i>';
+                return `
+                    <div class="project-card">
+                        ${mainImg}
+                        <h3>${escapeHtml(p.title)}</h3>
+                        <p><strong>${escapeHtml(p.type || '')}</strong></p>
+                        <p>USD $${p.price_usd || 0} / ZAR R${p.price_zar || 0}</p>
+                        <p>${escapeHtml(p.description || '').substring(0, 80)}...</p>
+                        <button class="edit-project btn" data-id="${p.id}">Edit</button>
+                        <button class="delete-project btn btn-danger" data-id="${p.id}">Delete</button>
+                    </div>
+                `;
+            }).join('');
+            // Attach events
+            document.querySelectorAll('.edit-project').forEach(btn => btn.addEventListener('click', () => openProjectModal(btn.dataset.id)));
+            document.querySelectorAll('.delete-project').forEach(btn => btn.addEventListener('click', async () => {
+                if (confirm('Delete this project?')) {
+                    await _supabase.from('projects').delete().eq('id', btn.dataset.id);
+                    loadProjects();
+                }
+            }));
+        } catch (err) {
+            console.error('Load projects error:', err);
+            showError(container, err.message);
+        }
     }
 
-    async function openModal(id = null) {
+    async function openProjectModal(id = null) {
         document.getElementById('modalTitle').innerText = id ? 'Edit Project' : 'Add Project';
         document.getElementById('editProjectId').value = id || '';
+        document.getElementById('projectName').value = '';
+        document.getElementById('projectType').value = '';
+        document.getElementById('priceUSD').value = '';
+        document.getElementById('priceZAR').value = '';
+        document.getElementById('projectDesc').value = '';
+        document.getElementById('projectLinks').value = '';
+        document.getElementById('imagePreviews').innerHTML = '';
+        document.querySelectorAll('#img0, #img1, #img2').forEach(inp => inp.value = '');
+
         if (id) {
             const { data, error } = await _supabase.from('projects').select('*').eq('id', id).single();
-            if (data) {
+            if (!error && data) {
                 document.getElementById('projectName').value = data.title || '';
                 document.getElementById('projectType').value = data.type || '';
                 document.getElementById('priceUSD').value = data.price_usd || '';
                 document.getElementById('priceZAR').value = data.price_zar || '';
                 document.getElementById('projectDesc').value = data.description || '';
                 document.getElementById('projectLinks').value = (data.links || []).join(', ');
-                // preview images
                 const images = data.images || [];
                 const previewDiv = document.getElementById('imagePreviews');
                 previewDiv.innerHTML = '';
@@ -131,30 +148,26 @@
                     previewDiv.appendChild(imgEl);
                 });
             }
-        } else {
-            document.getElementById('projectName').value = '';
-            document.getElementById('projectType').value = '';
-            document.getElementById('priceUSD').value = '';
-            document.getElementById('priceZAR').value = '';
-            document.getElementById('projectDesc').value = '';
-            document.getElementById('projectLinks').value = '';
-            document.getElementById('imagePreviews').innerHTML = '';
-            document.querySelectorAll('.projectImage').forEach(inp => inp.value = '');
         }
         document.getElementById('projectModal').style.display = 'flex';
+        document.getElementById('modalMessage').innerHTML = '';
     }
 
     async function saveProject() {
         const id = document.getElementById('editProjectId').value;
         const title = document.getElementById('projectName').value.trim();
-        if (!title) { document.getElementById('modalMessage').innerHTML = '<span class="error-msg">Project name required</span>'; return; }
+        if (!title) {
+            document.getElementById('modalMessage').innerHTML = '<div class="error-msg">Project name required</div>';
+            return;
+        }
         const type = document.getElementById('projectType').value;
         const price_usd = parseFloat(document.getElementById('priceUSD').value) || 0;
         const price_zar = parseFloat(document.getElementById('priceZAR').value) || 0;
         const description = document.getElementById('projectDesc').value;
         const linksRaw = document.getElementById('projectLinks').value;
         const links = linksRaw.split(',').map(l => l.trim()).filter(l => l);
-        // gather images (up to 3)
+        
+        // Gather images
         const imageFiles = [];
         for (let i = 0; i <= 2; i++) {
             const inp = document.getElementById(`img${i}`);
@@ -168,26 +181,52 @@
                 images.push(base64);
             }
         } else if (id) {
-            // keep existing images if not changed
+            // keep existing images
             const { data } = await _supabase.from('projects').select('images').eq('id', id).single();
             if (data) images = data.images || [];
         }
         const projectData = { title, type, price_usd, price_zar, description, links, images };
-        if (id) {
-            await _supabase.from('projects').update(projectData).eq('id', id);
-        } else {
-            await _supabase.from('projects').insert(projectData);
+        try {
+            if (id) {
+                await _supabase.from('projects').update(projectData).eq('id', id);
+            } else {
+                await _supabase.from('projects').insert(projectData);
+            }
+            document.getElementById('projectModal').style.display = 'none';
+            loadProjects();
+        } catch (err) {
+            document.getElementById('modalMessage').innerHTML = `<div class="error-msg">${err.message}</div>`;
         }
-        document.getElementById('projectModal').style.display = 'none';
-        loadProjects();
     }
 
-    document.getElementById('addProjectBtn').addEventListener('click', () => openModal());
+    // Preview images on file select
+    function setupImagePreviews() {
+        const inputs = ['img0', 'img1', 'img2'];
+        inputs.forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => {
+                const previewDiv = document.getElementById('imagePreviews');
+                previewDiv.innerHTML = '';
+                for (let i = 0; i <= 2; i++) {
+                    const inp = document.getElementById(`img${i}`);
+                    if (inp && inp.files && inp.files[0]) {
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(inp.files[0]);
+                        img.className = 'image-preview';
+                        if (i === 0) img.title = 'Main image';
+                        previewDiv.appendChild(img);
+                    }
+                }
+            });
+        });
+    }
+
+    document.getElementById('addProjectBtn').addEventListener('click', () => openProjectModal());
     document.getElementById('saveProjectBtn').addEventListener('click', saveProject);
     document.getElementById('closeModalBtn').addEventListener('click', () => document.getElementById('projectModal').style.display = 'none');
     document.getElementById('logoutBtn').addEventListener('click', async () => { await _supabase.auth.signOut(); window.location.href = LOGIN_URL; });
-    checkAuth();
-    loadProjects();
+    
+    setupImagePreviews();
+    await loadProjects();
 })();
 </script>
 </body>
