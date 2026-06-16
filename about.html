@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About & Team | A+Connect Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; }
+    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; }
+    .nav-links { background: white; padding: 0.5rem 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+    .nav-links a { text-decoration: none; color: #475569; }
+    .nav-links a.active { color: #e67e22; border-bottom: 2px solid #e67e22; }
+    .content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+    .card { background: white; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-weight: 500; margin-bottom: 0.3rem; }
+    .form-group input, .form-group textarea { width: 100%; padding: 0.6rem; border-radius: 20px; border: 1px solid #cbd5e1; }
+    button { background: #1e293b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 30px; cursor: pointer; }
+    .btn-danger { background: #ef4444; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .member-img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+    .image-preview { margin-top: 0.5rem; max-width: 100px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+<div class="admin-header">
+  <h1><i class="fas fa-info-circle"></i> About & Team</h1>
+  <button id="logoutBtn">Logout</button>
+</div>
+<div class="nav-links">
+  <a href="dashboard.html">Dashboard</a>
+  <a href="templates.html">Templates</a>
+  <a href="messages.html">Messages</a>
+  <a href="reviews.html">Reviews</a>
+  <a href="about.html" class="active">About</a>
+</div>
+<div class="content">
+  <!-- EDIT ABOUT STORY -->
+  <div class="card">
+    <h3><i class="fas fa-edit"></i> Edit "Our Story"</h3>
+    <textarea id="aboutText" rows="6" placeholder="Write about your company..."></textarea>
+    <button id="saveAboutBtn" style="margin-top:1rem;">Save Changes</button>
+    <div id="aboutMessage" style="margin-top:0.5rem;"></div>
+  </div>
+
+  <!-- ADD TEAM MEMBER (WITH FILE UPLOAD) -->
+  <div class="card">
+    <h3><i class="fas fa-user-plus"></i> Add Team Member</h3>
+    <form id="memberForm">
+      <div class="form-group"><label>Full Name *</label><input id="memberName" required></div>
+      <div class="form-group"><label>Role (e.g., Lead Developer)</label><input id="memberRole"></div>
+      <div class="form-group"><label>Bio (short description)</label><textarea id="memberBio" rows="2"></textarea></div>
+      <div class="form-group">
+        <label>Profile Image (upload)</label>
+        <input type="file" id="memberImageFile" accept="image/*">
+        <div id="imagePreview" class="image-preview"></div>
+      </div>
+      <div class="form-group"><label>Display Order (lower = earlier)</label><input id="memberOrder" type="number" value="0"></div>
+      <button type="submit">Add Member</button>
+      <div id="uploadStatus" style="margin-top:0.5rem; font-size:0.8rem;"></div>
+    </form>
+  </div>
+
+  <!-- LIST TEAM MEMBERS -->
+  <div class="card">
+    <h3><i class="fas fa-users"></i> Current Team Members</h3>
+    <table id="teamTable">
+      <thead><tr><th>Image</th><th>Name</th><th>Role</th><th>Bio</th><th>Order</th><th>Actions</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ---------- AUTH ----------
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) window.location.href = 'login.html';
+    return session;
+  }
+
+  // ---------- ABOUT STORY ----------
+  async function loadAbout() {
+    const { data } = await supabase.from('site_settings').select('value').eq('key', 'our_story').maybeSingle();
+    document.getElementById('aboutText').value = data?.value || 'A+Connect helps entrepreneurs build professional websites quickly.';
+  }
+
+  document.getElementById('saveAboutBtn').addEventListener('click', async () => {
+    const newText = document.getElementById('aboutText').value;
+    const { error } = await supabase.from('site_settings').upsert({ key: 'our_story', value: newText }, { onConflict: 'key' });
+    const msgDiv = document.getElementById('aboutMessage');
+    if (error) msgDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+    else msgDiv.innerHTML = '<span style="color:green;">✅ About section updated!</span>';
+    setTimeout(() => msgDiv.innerHTML = '', 3000);
+  });
+
+  // ---------- IMAGE UPLOAD HELPERS ----------
+  let currentFile = null;
+  const fileInput = document.getElementById('memberImageFile');
+  const previewDiv = document.getElementById('imagePreview');
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      currentFile = null;
+      previewDiv.innerHTML = '';
+      return;
+    }
+    // validate type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      fileInput.value = '';
+      return;
+    }
+    currentFile = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      previewDiv.innerHTML = `<img src="${ev.target.result}" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  async function uploadImage(file) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const filePath = `team/${fileName}`;
+    const { data, error } = await supabase.storage
+      .from('team-profiles')
+      .upload(filePath, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage
+      .from('team-profiles')
+      .getPublicUrl(filePath);
+    return publicUrl;
+  }
+
+  // ---------- TEAM MEMBERS CRUD ----------
+  async function loadTeamMembers() {
+    const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
+    if (error) return;
+    const tbody = document.querySelector('#teamTable tbody');
+    tbody.innerHTML = data.map(m => `
+      <tr>
+        <td>${m.profile_image ? `<img src="${escapeHtml(m.profile_image)}" class="member-img" onerror="this.style.display='none'">` : '—'}</td>
+        <td>${escapeHtml(m.name)}</td>
+        <td>${escapeHtml(m.role)}</td>
+        <td>${escapeHtml(m.bio)}</td>
+        <td>${m.display_order}</td>
+        <td><button class="btn-danger" onclick="deleteMember('${m.id}')">Delete</button></td>
+      </tr>
+    `).join('');
+  }
+
+  window.deleteMember = async (id) => {
+    if (confirm('Delete this team member?')) {
+      await supabase.from('team_members').delete().eq('id', id);
+      loadTeamMembers();
+    }
+  };
+
+  document.getElementById('memberForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('memberName').value.trim();
+    if (!name) return alert('Name is required');
+
+    const role = document.getElementById('memberRole').value.trim();
+    const bio = document.getElementById('memberBio').value.trim();
+    const display_order = parseInt(document.getElementById('memberOrder').value) || 0;
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    let profile_image = null;
+    if (currentFile) {
+      statusDiv.innerHTML = 'Uploading image...';
+      try {
+        profile_image = await uploadImage(currentFile);
+        statusDiv.innerHTML = 'Image uploaded.';
+      } catch (err) {
+        statusDiv.innerHTML = `<span style="color:red;">Upload failed: ${err.message}</span>`;
+        return;
+      }
+    }
+
+    const { error } = await supabase.from('team_members').insert([{
+      name, role, bio, profile_image, display_order
+    }]);
+
+    if (error) {
+      statusDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+    } else {
+      statusDiv.innerHTML = '<span style="color:green;">Member added successfully!</span>';
+      document.getElementById('memberForm').reset();
+      currentFile = null;
+      previewDiv.innerHTML = '';
+      fileInput.value = '';
+      loadTeamMembers();
+      setTimeout(() => statusDiv.innerHTML = '', 3000);
+    }
+  });
+
+  // ---------- LOGOUT ----------
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) {
+    return str?.replace(/[&<>]/g, function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];
+    }) || '';
+  }
+
+  // ---------- INIT ----------
+  checkAuth();
+  loadAbout();
+  loadTeamMembers();
+</script>
+</body>
+</html>
