@@ -9,9 +9,10 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; }
-    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; }
+    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+    .admin-header h1 { font-size: 1.4rem; }
     .nav-links { background: white; padding: 0.5rem 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; }
-    .nav-links a { text-decoration: none; color: #475569; }
+    .nav-links a { text-decoration: none; color: #475569; padding: 0.5rem 0; }
     .nav-links a.active { color: #e67e22; border-bottom: 2px solid #e67e22; }
     .content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
     .card { background: white; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem; }
@@ -24,18 +25,20 @@
     button { background: #1e293b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 30px; cursor: pointer; }
     .btn-danger { background: #ef4444; }
     .btn-warning { background: #f59e0b; }
+    .btn-secondary { background: #6b7280; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
     th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
     .template-img { width: 60px; height: 40px; object-fit: cover; border-radius: 8px; }
     .image-preview { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
     .preview-img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
     .form-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .logout-btn { background: #ef4444; color: white; border: none; padding: 0.4rem 1rem; border-radius: 30px; cursor: pointer; }
   </style>
 </head>
 <body>
 <div class="admin-header">
   <h1><i class="fas fa-code"></i> Manage Templates</h1>
-  <button id="logoutBtn">Logout</button>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
 </div>
 <div class="nav-links">
   <a href="dashboard.html">Dashboard</a>
@@ -71,7 +74,7 @@
           <div class="benefit-row"><i class="fas fa-check-circle"></i><input type="text" class="benefit-input" placeholder="Benefit 3"></div>
           <div class="benefit-row"><i class="fas fa-check-circle"></i><input type="text" class="benefit-input" placeholder="Benefit 4"></div>
         </div>
-        <button type="button" id="addBenefitBtn" style="margin-top:0.5rem; background:#6b7280;"><i class="fas fa-plus"></i> Add another benefit</button>
+        <button type="button" id="addBenefitBtn" class="btn-secondary" style="margin-top:0.5rem;"><i class="fas fa-plus"></i> Add another benefit</button>
       </div>
       
       <div class="form-group"><label>Once-off Price (ZAR) *</label><input id="price" type="number" required></div>
@@ -79,7 +82,7 @@
       
       <input type="hidden" id="editingId" value="">
       <button type="submit" id="submitBtn">Create Template</button>
-      <button type="button" id="cancelEditBtn" style="background:#6b7280; display:none;">Cancel Edit</button>
+      <button type="button" id="cancelEditBtn" class="btn-secondary" style="display:none;">Cancel Edit</button>
       <div id="uploadStatus" style="margin-top:0.5rem; font-size:0.8rem;"></div>
     </form>
   </div>
@@ -95,254 +98,257 @@
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  (function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let currentFiles = [null, null, null];
-  let existingImageUrls = []; // for edit mode, store existing URLs to avoid re-upload
+    let currentFiles = [null, null, null];
+    let existingImageUrls = [];
 
-  // ---------- AUTH ----------
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = 'login.html';
-    return session;
-  }
+    // ---------- AUTH ----------
+    async function checkAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) window.location.href = 'login.html';
+    }
 
-  // ---------- IMAGE UPLOAD HELPERS ----------
-  function setupImagePreview(inputId, previewId, index) {
-    const input = document.getElementById(inputId);
-    const previewDiv = document.getElementById(previewId);
-    input.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) {
-        currentFiles[index] = null;
-        previewDiv.innerHTML = '';
+    // ---------- IMAGE UPLOAD HELPERS ----------
+    function setupImagePreview(inputId, previewId, index) {
+      const input = document.getElementById(inputId);
+      const previewDiv = document.getElementById(previewId);
+      input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+          currentFiles[index] = null;
+          previewDiv.innerHTML = '';
+          return;
+        }
+        if (!file.type.startsWith('image/')) {
+          alert('Please select an image file');
+          input.value = '';
+          return;
+        }
+        currentFiles[index] = file;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          previewDiv.innerHTML = `<img src="${ev.target.result}" class="preview-img">`;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadImages(existingUrls = []) {
+      const uploadedUrls = [...existingUrls];
+      for (let i = 0; i < currentFiles.length; i++) {
+        const file = currentFiles[i];
+        if (file) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `template-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+          const filePath = `templates/${fileName}`;
+          const { error } = await supabaseClient.storage
+            .from('template-images')
+            .upload(filePath, file);
+          if (error) throw new Error(`Image ${i+1} upload failed: ${error.message}`);
+          const { data: { publicUrl } } = supabaseClient.storage
+            .from('template-images')
+            .getPublicUrl(filePath);
+          uploadedUrls[i] = publicUrl;
+        }
+      }
+      return uploadedUrls.filter(url => url && url !== null);
+    }
+
+    // ---------- BENEFITS (dynamic) ----------
+    function getBenefits() {
+      const inputs = document.querySelectorAll('.benefit-input');
+      const benefits = [];
+      inputs.forEach(inp => {
+        const val = inp.value.trim();
+        if (val) benefits.push(val);
+      });
+      return benefits;
+    }
+
+    function setBenefits(benefitsArray) {
+      const container = document.getElementById('benefitsContainer');
+      container.innerHTML = '';
+      benefitsArray.forEach((benefit, idx) => {
+        const div = document.createElement('div');
+        div.className = 'benefit-row';
+        div.innerHTML = `<i class="fas fa-check-circle"></i><input type="text" class="benefit-input" value="${escapeHtml(benefit)}" placeholder="Benefit ${idx+1}">`;
+        container.appendChild(div);
+      });
+      while (container.children.length < 4) {
+        const div = document.createElement('div');
+        div.className = 'benefit-row';
+        div.innerHTML = `<i class="fas fa-check-circle"></i><input type="text" class="benefit-input" placeholder="Benefit ${container.children.length+1}">`;
+        container.appendChild(div);
+      }
+    }
+
+    document.getElementById('addBenefitBtn').addEventListener('click', () => {
+      const container = document.getElementById('benefitsContainer');
+      const div = document.createElement('div');
+      div.className = 'benefit-row';
+      div.innerHTML = `<i class="fas fa-check-circle"></i><input type="text" class="benefit-input" placeholder="New benefit">`;
+      container.appendChild(div);
+    });
+
+    // ---------- CREATE / UPDATE TEMPLATE ----------
+    async function saveTemplate(event) {
+      event.preventDefault();
+      const title = document.getElementById('title').value.trim();
+      if (!title) return alert('Template name required');
+      const description = document.getElementById('description').value.trim();
+      const price = parseInt(document.getElementById('price').value);
+      const monthly = parseInt(document.getElementById('monthly').value) || 0;
+      const benefits = getBenefits();
+      if (benefits.length < 4) {
+        alert('Please provide at least 4 benefits');
         return;
       }
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        input.value = '';
+      const editingId = document.getElementById('editingId').value;
+      const statusDiv = document.getElementById('uploadStatus');
+      
+      let images = [];
+      try {
+        if (editingId && existingImageUrls.length > 0) {
+          images = await uploadImages(existingImageUrls);
+        } else {
+          images = await uploadImages([]);
+        }
+      } catch (err) {
+        statusDiv.innerHTML = `<span style="color:red;">${err.message}</span>`;
         return;
       }
-      currentFiles[index] = file;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        previewDiv.innerHTML = `<img src="${ev.target.result}" class="preview-img">`;
+
+      const templateData = {
+        title,
+        description,
+        type: 'template',
+        price_zar: price,
+        monthly_fee: monthly,
+        images: images,
+        features: benefits
       };
-      reader.readAsDataURL(file);
-    });
-  }
 
-  async function uploadImages(existingUrls = []) {
-    // existingUrls are kept if no new file is selected for that slot
-    const uploadedUrls = [...existingUrls];
-    for (let i = 0; i < currentFiles.length; i++) {
-      const file = currentFiles[i];
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `template-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-        const filePath = `templates/${fileName}`;
-        const { error } = await supabase.storage
-          .from('template-images')
-          .upload(filePath, file);
-        if (error) throw new Error(`Image ${i+1} upload failed: ${error.message}`);
-        const { data: { publicUrl } } = supabase.storage
-          .from('template-images')
-          .getPublicUrl(filePath);
-        uploadedUrls[i] = publicUrl;
-      }
-    }
-    // filter out nulls (if less than 3 images, keep only those with value)
-    return uploadedUrls.filter(url => url && url !== null);
-  }
-
-  // ---------- BENEFITS (dynamic) ----------
-  function getBenefits() {
-    const inputs = document.querySelectorAll('.benefit-input');
-    const benefits = [];
-    inputs.forEach(inp => {
-      const val = inp.value.trim();
-      if (val) benefits.push(val);
-    });
-    return benefits;
-  }
-
-  function setBenefits(benefitsArray) {
-    const container = document.getElementById('benefitsContainer');
-    container.innerHTML = '';
-    benefitsArray.forEach((benefit, idx) => {
-      const div = document.createElement('div');
-      div.className = 'benefit-row';
-      div.innerHTML = `<i class="fas fa-check-circle"></i><input type="text" class="benefit-input" value="${escapeHtml(benefit)}" placeholder="Benefit ${idx+1}">`;
-      container.appendChild(div);
-    });
-    // ensure at least 4 rows
-    while (container.children.length < 4) {
-      const div = document.createElement('div');
-      div.className = 'benefit-row';
-      div.innerHTML = `<i class="fas fa-check-circle"></i><input type="text" class="benefit-input" placeholder="Benefit ${container.children.length+1}">`;
-      container.appendChild(div);
-    }
-  }
-
-  document.getElementById('addBenefitBtn').addEventListener('click', () => {
-    const container = document.getElementById('benefitsContainer');
-    const div = document.createElement('div');
-    div.className = 'benefit-row';
-    div.innerHTML = `<i class="fas fa-check-circle"></i><input type="text" class="benefit-input" placeholder="New benefit">`;
-    container.appendChild(div);
-  });
-
-  // ---------- CREATE / UPDATE TEMPLATE ----------
-  async function saveTemplate(event) {
-    event.preventDefault();
-    const title = document.getElementById('title').value.trim();
-    if (!title) return alert('Template name required');
-    const description = document.getElementById('description').value.trim();
-    const price = parseInt(document.getElementById('price').value);
-    const monthly = parseInt(document.getElementById('monthly').value) || 0;
-    const benefits = getBenefits();
-    if (benefits.length < 4) {
-      alert('Please provide at least 4 benefits');
-      return;
-    }
-    const editingId = document.getElementById('editingId').value;
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    let images = [];
-    try {
-      if (editingId && existingImageUrls.length > 0) {
-        // keep existing images for slots where no new file selected
-        images = await uploadImages(existingImageUrls);
+      let error;
+      if (editingId) {
+        ({ error } = await supabaseClient.from('projects').update(templateData).eq('id', editingId));
       } else {
-        images = await uploadImages([]);
+        ({ error } = await supabaseClient.from('projects').insert([templateData]));
       }
-    } catch (err) {
-      statusDiv.innerHTML = `<span style="color:red;">${err.message}</span>`;
-      return;
+
+      if (error) {
+        statusDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+      } else {
+        statusDiv.innerHTML = `<span style="color:green;">Template ${editingId ? 'updated' : 'created'} successfully!</span>`;
+        resetForm();
+        loadTemplates();
+        setTimeout(() => statusDiv.innerHTML = '', 3000);
+      }
     }
 
-    const templateData = {
-      title,
-      description,
-      type: 'template',
-      price_zar: price,
-      monthly_fee: monthly,
-      images: images,
-      features: benefits  // store benefits as features array
+    function resetForm() {
+      document.getElementById('templateForm').reset();
+      document.getElementById('editingId').value = '';
+      document.getElementById('formTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Template';
+      document.getElementById('submitBtn').innerText = 'Create Template';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+      currentFiles = [null, null, null];
+      existingImageUrls = [];
+      document.querySelectorAll('.image-preview').forEach(div => div.innerHTML = '');
+      document.getElementById('image1').value = '';
+      document.getElementById('image2').value = '';
+      document.getElementById('image3').value = '';
+      setBenefits(['', '', '', '']);
+    }
+
+    // ---------- EDIT TEMPLATE ----------
+    window.editTemplate = async (id) => {
+      const { data, error } = await supabaseClient.from('projects').select('*').eq('id', id).single();
+      if (error) return alert(error.message);
+      document.getElementById('title').value = data.title;
+      document.getElementById('description').value = data.description || '';
+      document.getElementById('price').value = data.price_zar;
+      document.getElementById('monthly').value = data.monthly_fee || 0;
+      setBenefits(data.features || []);
+      existingImageUrls = data.images || [];
+      const previewDivs = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
+      for (let i = 0; i < previewDivs.length; i++) {
+        if (existingImageUrls[i]) {
+          previewDivs[i].innerHTML = `<img src="${existingImageUrls[i]}" class="preview-img">`;
+        } else {
+          previewDivs[i].innerHTML = '';
+        }
+      }
+      document.getElementById('editingId').value = id;
+      document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Template';
+      document.getElementById('submitBtn').innerText = 'Update Template';
+      document.getElementById('cancelEditBtn').style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase.from('projects').update(templateData).eq('id', editingId));
-    } else {
-      ({ error } = await supabase.from('projects').insert([templateData]));
-    }
+    document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-    if (error) {
-      statusDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
-    } else {
-      statusDiv.innerHTML = `<span style="color:green;">Template ${editingId ? 'updated' : 'created'} successfully!</span>`;
-      resetForm();
-      loadTemplates();
-      setTimeout(() => statusDiv.innerHTML = '', 3000);
-    }
-  }
-
-  function resetForm() {
-    document.getElementById('templateForm').reset();
-    document.getElementById('editingId').value = '';
-    document.getElementById('formTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Template';
-    document.getElementById('submitBtn').innerText = 'Create Template';
-    document.getElementById('cancelEditBtn').style.display = 'none';
-    currentFiles = [null, null, null];
-    existingImageUrls = [];
-    document.querySelectorAll('.image-preview').forEach(div => div.innerHTML = '');
-    document.getElementById('image1').value = '';
-    document.getElementById('image2').value = '';
-    document.getElementById('image3').value = '';
-    // reset benefits to 4 empty rows
-    setBenefits(['', '', '', '']);
-  }
-
-  // ---------- EDIT TEMPLATE ----------
-  async function editTemplate(id) {
-    const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
-    if (error) return alert(error.message);
-    document.getElementById('title').value = data.title;
-    document.getElementById('description').value = data.description || '';
-    document.getElementById('price').value = data.price_zar;
-    document.getElementById('monthly').value = data.monthly_fee || 0;
-    setBenefits(data.features || []);
-    existingImageUrls = data.images || [];
-    // show existing images as previews (static)
-    const previewDivs = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
-    for (let i = 0; i < previewDivs.length; i++) {
-      if (existingImageUrls[i]) {
-        previewDivs[i].innerHTML = `<img src="${existingImageUrls[i]}" class="preview-img">`;
-      } else {
-        previewDivs[i].innerHTML = '';
+    // ---------- DELETE TEMPLATE ----------
+    window.deleteTemplate = async (id) => {
+      if (confirm('Delete this template permanently?')) {
+        const { error } = await supabaseClient.from('projects').delete().eq('id', id);
+        if (error) alert(error.message);
+        else loadTemplates();
       }
+    };
+
+    // ---------- LIST TEMPLATES ----------
+    async function loadTemplates() {
+      const { data, error } = await supabaseClient.from('projects').select('*').order('created_at', { ascending: false });
+      if (error) return;
+      const tbody = document.querySelector('#templatesTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:#6b7280;">No templates yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(t => `
+        <tr>
+          <td>${t.images && t.images.length ? `<img src="${t.images[0]}" class="template-img">` : '—'}</td>
+          <td><strong>${escapeHtml(t.title)}</strong></td>
+          <td>R${t.price_zar}</td>
+          <td>R${t.monthly_fee || 0}</td>
+          <td>
+            <button class="btn-warning" onclick="editTemplate('${t.id}')">Edit</button>
+            <button class="btn-danger" onclick="deleteTemplate('${t.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
     }
-    document.getElementById('editingId').value = id;
-    document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Template';
-    document.getElementById('submitBtn').innerText = 'Update Template';
-    document.getElementById('cancelEditBtn').style.display = 'inline-block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
 
-  document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+    // ---------- LOGOUT ----------
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    });
 
-  // ---------- DELETE TEMPLATE ----------
-  window.deleteTemplate = async (id) => {
-    if (confirm('Delete this template permanently?')) {
-      const { error } = await supabase.from('projects').delete().eq('id', id);
-      if (error) alert(error.message);
-      else loadTemplates();
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
     }
-  };
 
-  // ---------- LIST TEMPLATES ----------
-  async function loadTemplates() {
-    const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
-    if (error) return;
-    const tbody = document.querySelector('#templatesTable tbody');
-    tbody.innerHTML = data.map(t => `
-      <tr>
-        <td>${t.images && t.images.length ? `<img src="${t.images[0]}" class="template-img">` : '—'}</td>
-        <td>${escapeHtml(t.title)}</td>
-        <td>R${t.price_zar}</td>
-        <td>R${t.monthly_fee || 0}</td>
-        <td>
-          <button class="btn-warning" onclick="editTemplate('${t.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteTemplate('${t.id}')">Delete</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-
-  // ---------- LOGOUT ----------
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'login.html';
-  });
-
-  function escapeHtml(str) {
-    return str?.replace(/[&<>]/g, function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];
-    }) || '';
-  }
-
-  // ---------- INIT ----------
-  setupImagePreview('image1', 'preview1', 0);
-  setupImagePreview('image2', 'preview2', 1);
-  setupImagePreview('image3', 'preview3', 2);
-  document.getElementById('templateForm').addEventListener('submit', saveTemplate);
-  
-  checkAuth();
-  loadTemplates();
-  resetForm(); // initial empty benefits
+    // ---------- INIT ----------
+    setupImagePreview('image1', 'preview1', 0);
+    setupImagePreview('image2', 'preview2', 1);
+    setupImagePreview('image3', 'preview3', 2);
+    document.getElementById('templateForm').addEventListener('submit', saveTemplate);
+    
+    checkAuth();
+    loadTemplates();
+    resetForm();
+  })();
 </script>
 </body>
 </html>

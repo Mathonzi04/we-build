@@ -46,7 +46,10 @@
       padding: 1.2rem;
       border-radius: 24px;
       text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
+    .stat-card i { font-size: 1.8rem; color: #e67e22; margin-bottom: 0.5rem; }
+    .stat-card h3 { font-size: 1.8rem; }
     .logout-btn {
       background: #ef4444;
       color: white;
@@ -55,6 +58,9 @@
       border-radius: 30px;
       cursor: pointer;
     }
+    .card { background: white; border-radius: 24px; padding: 1.5rem; }
+    .card a { color: #e67e22; text-decoration: none; }
+    .card a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -71,42 +77,45 @@
 </div>
 <div class="content">
   <div class="stats-grid" id="stats"></div>
-  <div style="background:white; border-radius:24px; padding:1.5rem;">
+  <div class="card">
     <h3>Quick links</h3>
-    <p><a href="templates.html">➕ Add new template</a> | <a href="reviews.html">⭐ Approve reviews</a></p>
+    <p><a href="templates.html">➕ Add new template</a> &nbsp;|&nbsp; <a href="reviews.html">⭐ Approve reviews</a></p>
   </div>
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  (function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = 'login.html';
-  }
+    async function checkAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) window.location.href = 'login.html';
+    }
 
-  async function loadStats() {
-    const { count: templates } = await supabase.from('projects').select('*', { count: 'exact', head: true });
-    const { count: messages } = await supabase.from('contact_messages').select('*', { count: 'exact', head: true });
-    const { count: reviews } = await supabase.from('reviews').select('*', { count: 'exact', head: true });
-    const { count: pending } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', false);
-    document.getElementById('stats').innerHTML = `
-      <div class="stat-card"><i class="fas fa-code"></i><h3>${templates || 0}</h3><p>Templates</p></div>
-      <div class="stat-card"><i class="fas fa-envelope"></i><h3>${messages || 0}</h3><p>Messages</p></div>
-      <div class="stat-card"><i class="fas fa-star"></i><h3>${reviews || 0}</h3><p>Reviews</p></div>
-      <div class="stat-card"><i class="fas fa-clock"></i><h3>${pending || 0}</h3><p>Pending reviews</p></div>
-    `;
-  }
+    async function loadStats() {
+      const { count: templates } = await supabaseClient.from('projects').select('*', { count: 'exact', head: true });
+      const { count: messages } = await supabaseClient.from('contact_messages').select('*', { count: 'exact', head: true });
+      const { count: reviews } = await supabaseClient.from('reviews').select('*', { count: 'exact', head: true });
+      const { count: pending } = await supabaseClient.from('reviews').select('*', { count: 'exact', head: true }).eq('is_approved', false);
 
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'login.html';
-  });
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card"><i class="fas fa-code"></i><h3>${templates || 0}</h3><p>Templates</p></div>
+        <div class="stat-card"><i class="fas fa-envelope"></i><h3>${messages || 0}</h3><p>Messages</p></div>
+        <div class="stat-card"><i class="fas fa-star"></i><h3>${reviews || 0}</h3><p>Reviews</p></div>
+        <div class="stat-card"><i class="fas fa-clock"></i><h3>${pending || 0}</h3><p>Pending reviews</p></div>
+      `;
+    }
 
-  checkAuth();
-  loadStats();
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    checkAuth();
+    loadStats();
+  })();
 </script>
 </body>
 </html>

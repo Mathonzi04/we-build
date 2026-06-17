@@ -9,9 +9,10 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; }
-    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; }
+    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+    .admin-header h1 { font-size: 1.4rem; }
     .nav-links { background: white; padding: 0.5rem 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; }
-    .nav-links a { text-decoration: none; color: #475569; }
+    .nav-links a { text-decoration: none; color: #475569; padding: 0.5rem 0; }
     .nav-links a.active { color: #e67e22; border-bottom: 2px solid #e67e22; }
     .content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
     .card { background: white; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem; }
@@ -24,12 +25,13 @@
     th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
     .member-img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
     .image-preview { margin-top: 0.5rem; max-width: 100px; border-radius: 50%; }
+    .logout-btn { background: #ef4444; color: white; border: none; padding: 0.4rem 1rem; border-radius: 30px; cursor: pointer; }
   </style>
 </head>
 <body>
 <div class="admin-header">
   <h1><i class="fas fa-info-circle"></i> About & Team</h1>
-  <button id="logoutBtn">Logout</button>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
 </div>
 <div class="nav-links">
   <a href="dashboard.html">Dashboard</a>
@@ -76,151 +78,168 @@
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  (function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // ---------- AUTH ----------
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = 'login.html';
-    return session;
-  }
+    let currentFile = null;
+    const fileInput = document.getElementById('memberImageFile');
+    const previewDiv = document.getElementById('imagePreview');
 
-  // ---------- ABOUT STORY ----------
-  async function loadAbout() {
-    const { data } = await supabase.from('site_settings').select('value').eq('key', 'our_story').maybeSingle();
-    document.getElementById('aboutText').value = data?.value || 'A+Connect helps entrepreneurs build professional websites quickly.';
-  }
-
-  document.getElementById('saveAboutBtn').addEventListener('click', async () => {
-    const newText = document.getElementById('aboutText').value;
-    const { error } = await supabase.from('site_settings').upsert({ key: 'our_story', value: newText }, { onConflict: 'key' });
-    const msgDiv = document.getElementById('aboutMessage');
-    if (error) msgDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
-    else msgDiv.innerHTML = '<span style="color:green;">✅ About section updated!</span>';
-    setTimeout(() => msgDiv.innerHTML = '', 3000);
-  });
-
-  // ---------- IMAGE UPLOAD HELPERS ----------
-  let currentFile = null;
-  const fileInput = document.getElementById('memberImageFile');
-  const previewDiv = document.getElementById('imagePreview');
-
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) {
-      currentFile = null;
-      previewDiv.innerHTML = '';
-      return;
+    // ---------- AUTH ----------
+    async function checkAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) window.location.href = 'login.html';
     }
-    // validate type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
-      fileInput.value = '';
-      return;
+
+    // ---------- ABOUT STORY ----------
+    async function loadAbout() {
+      const { data } = await supabaseClient
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'our_story')
+        .maybeSingle();
+      document.getElementById('aboutText').value = data?.value || 'A+Connect helps entrepreneurs build professional websites quickly.';
     }
-    currentFile = file;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      previewDiv.innerHTML = `<img src="${ev.target.result}" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">`;
-    };
-    reader.readAsDataURL(file);
-  });
 
-  async function uploadImage(file) {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-    const filePath = `team/${fileName}`;
-    const { data, error } = await supabase.storage
-      .from('team-profiles')
-      .upload(filePath, file);
-    if (error) throw error;
-    const { data: { publicUrl } } = supabase.storage
-      .from('team-profiles')
-      .getPublicUrl(filePath);
-    return publicUrl;
-  }
+    document.getElementById('saveAboutBtn').addEventListener('click', async () => {
+      const newText = document.getElementById('aboutText').value;
+      const { error } = await supabaseClient
+        .from('site_settings')
+        .upsert({ key: 'our_story', value: newText }, { onConflict: 'key' });
+      const msgDiv = document.getElementById('aboutMessage');
+      if (error) msgDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+      else msgDiv.innerHTML = '<span style="color:green;">✅ About section updated!</span>';
+      setTimeout(() => msgDiv.innerHTML = '', 3000);
+    });
 
-  // ---------- TEAM MEMBERS CRUD ----------
-  async function loadTeamMembers() {
-    const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
-    if (error) return;
-    const tbody = document.querySelector('#teamTable tbody');
-    tbody.innerHTML = data.map(m => `
-      <tr>
-        <td>${m.profile_image ? `<img src="${escapeHtml(m.profile_image)}" class="member-img" onerror="this.style.display='none'">` : '—'}</td>
-        <td>${escapeHtml(m.name)}</td>
-        <td>${escapeHtml(m.role)}</td>
-        <td>${escapeHtml(m.bio)}</td>
-        <td>${m.display_order}</td>
-        <td><button class="btn-danger" onclick="deleteMember('${m.id}')">Delete</button></td>
-      </tr>
-    `).join('');
-  }
-
-  window.deleteMember = async (id) => {
-    if (confirm('Delete this team member?')) {
-      await supabase.from('team_members').delete().eq('id', id);
-      loadTeamMembers();
-    }
-  };
-
-  document.getElementById('memberForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('memberName').value.trim();
-    if (!name) return alert('Name is required');
-
-    const role = document.getElementById('memberRole').value.trim();
-    const bio = document.getElementById('memberBio').value.trim();
-    const display_order = parseInt(document.getElementById('memberOrder').value) || 0;
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    let profile_image = null;
-    if (currentFile) {
-      statusDiv.innerHTML = 'Uploading image...';
-      try {
-        profile_image = await uploadImage(currentFile);
-        statusDiv.innerHTML = 'Image uploaded.';
-      } catch (err) {
-        statusDiv.innerHTML = `<span style="color:red;">Upload failed: ${err.message}</span>`;
+    // ---------- IMAGE UPLOAD ----------
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        currentFile = null;
+        previewDiv.innerHTML = '';
         return;
       }
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        fileInput.value = '';
+        return;
+      }
+      currentFile = file;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        previewDiv.innerHTML = `<img src="${ev.target.result}" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    async function uploadImage(file) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+      const filePath = `team/${fileName}`;
+      const { error } = await supabaseClient.storage
+        .from('team-profiles')
+        .upload(filePath, file);
+      if (error) throw error;
+      const { data: { publicUrl } } = supabaseClient.storage
+        .from('team-profiles')
+        .getPublicUrl(filePath);
+      return publicUrl;
     }
 
-    const { error } = await supabase.from('team_members').insert([{
-      name, role, bio, profile_image, display_order
-    }]);
-
-    if (error) {
-      statusDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
-    } else {
-      statusDiv.innerHTML = '<span style="color:green;">Member added successfully!</span>';
-      document.getElementById('memberForm').reset();
-      currentFile = null;
-      previewDiv.innerHTML = '';
-      fileInput.value = '';
-      loadTeamMembers();
-      setTimeout(() => statusDiv.innerHTML = '', 3000);
+    // ---------- TEAM MEMBERS CRUD ----------
+    async function loadTeamMembers() {
+      const { data, error } = await supabaseClient
+        .from('team_members')
+        .select('*')
+        .order('display_order', { ascending: true });
+      if (error) return;
+      const tbody = document.querySelector('#teamTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#6b7280;">No team members yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(m => `
+        <tr>
+          <td>${m.profile_image ? `<img src="${escapeHtml(m.profile_image)}" class="member-img" onerror="this.style.display='none'">` : '—'}</td>
+          <td><strong>${escapeHtml(m.name)}</strong></td>
+          <td>${escapeHtml(m.role)}</td>
+          <td>${escapeHtml(m.bio)}</td>
+          <td>${m.display_order}</td>
+          <td><button class="btn-danger" onclick="deleteMember('${m.id}')">Delete</button></td>
+        </tr>
+      `).join('');
     }
-  });
 
-  // ---------- LOGOUT ----------
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'login.html';
-  });
+    window.deleteMember = async (id) => {
+      if (confirm('Delete this team member?')) {
+        await supabaseClient.from('team_members').delete().eq('id', id);
+        loadTeamMembers();
+      }
+    };
 
-  function escapeHtml(str) {
-    return str?.replace(/[&<>]/g, function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];
-    }) || '';
-  }
+    document.getElementById('memberForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('memberName').value.trim();
+      if (!name) return alert('Name is required');
 
-  // ---------- INIT ----------
-  checkAuth();
-  loadAbout();
-  loadTeamMembers();
+      const role = document.getElementById('memberRole').value.trim();
+      const bio = document.getElementById('memberBio').value.trim();
+      const display_order = parseInt(document.getElementById('memberOrder').value) || 0;
+      const statusDiv = document.getElementById('uploadStatus');
+      
+      let profile_image = null;
+      if (currentFile) {
+        statusDiv.innerHTML = 'Uploading image...';
+        try {
+          profile_image = await uploadImage(currentFile);
+          statusDiv.innerHTML = 'Image uploaded.';
+        } catch (err) {
+          statusDiv.innerHTML = `<span style="color:red;">Upload failed: ${err.message}</span>`;
+          return;
+        }
+      }
+
+      const { error } = await supabaseClient.from('team_members').insert([{
+        name, role, bio, profile_image, display_order
+      }]);
+
+      if (error) {
+        statusDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+      } else {
+        statusDiv.innerHTML = '<span style="color:green;">Member added successfully!</span>';
+        document.getElementById('memberForm').reset();
+        currentFile = null;
+        previewDiv.innerHTML = '';
+        fileInput.value = '';
+        loadTeamMembers();
+        setTimeout(() => statusDiv.innerHTML = '', 3000);
+      }
+    });
+
+    // ---------- LOGOUT ----------
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
+    }
+
+    // ---------- INIT ----------
+    checkAuth();
+    loadAbout();
+    loadTeamMembers();
+  })();
 </script>
 </body>
 </html>

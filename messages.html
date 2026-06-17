@@ -9,20 +9,33 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; }
-    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; }
+    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+    .admin-header h1 { font-size: 1.4rem; }
     .nav-links { background: white; padding: 0.5rem 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; }
-    .nav-links a { text-decoration: none; color: #475569; }
+    .nav-links a { text-decoration: none; color: #475569; padding: 0.5rem 0; }
     .nav-links a.active { color: #e67e22; border-bottom: 2px solid #e67e22; }
     .content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
     .card { background: white; border-radius: 24px; padding: 1.5rem; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .status-badge {
+      padding: 0.2rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .status-new { background: #fef3c7; color: #92400e; }
+    .status-read { background: #dbeafe; color: #1e40af; }
+    .status-replied { background: #d1fae5; color: #065f46; }
+    .logout-btn { background: #ef4444; color: white; border: none; padding: 0.4rem 1rem; border-radius: 30px; cursor: pointer; }
+    .btn-sm { padding: 0.3rem 0.8rem; border-radius: 30px; border: none; cursor: pointer; margin: 2px; font-size: 0.8rem; }
+    .btn-success { background: #10b981; color: white; }
   </style>
 </head>
 <body>
 <div class="admin-header">
   <h1><i class="fas fa-envelope"></i> Messages</h1>
-  <button id="logoutBtn">Logout</button>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
 </div>
 <div class="nav-links">
   <a href="dashboard.html">Dashboard</a>
@@ -33,52 +46,87 @@
 </div>
 <div class="content">
   <div class="card">
-    <h3>Contact Messages</h3>
+    <h3><i class="fas fa-inbox"></i> Contact Messages</h3>
     <table id="messagesTable">
-      <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead>
+      <thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Subject</th><th>Message</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  (function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = 'login.html';
-  }
+    async function checkAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) window.location.href = 'login.html';
+    }
 
-  async function loadMessages() {
-    const { data } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-    const tbody = document.querySelector('#messagesTable tbody');
-    tbody.innerHTML = data.map(m => `
-      <tr>
-        <td>${new Date(m.created_at).toLocaleDateString()}</td>
-        <td>${escapeHtml(m.customer_name)}</td>
-        <td>${escapeHtml(m.customer_email)}</td>
-        <td>${escapeHtml(m.subject)}</td>
-        <td>${escapeHtml(m.message)}</td>
-        <td>${m.status || 'new'}</td>
-      </tr>
-    `).join('');
-  }
+    async function loadMessages() {
+      const { data, error } = await supabaseClient
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading messages:', error);
+        return;
+      }
 
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'login.html';
-  });
+      const tbody = document.querySelector('#messagesTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:#6b7280;">No messages yet</td></tr>`;
+        return;
+      }
 
-  function escapeHtml(str) {
-    return str?.replace(/[&<>]/g, function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];
-    }) || '';
-  }
+      tbody.innerHTML = data.map(m => {
+        const statusClass = `status-${m.status || 'new'}`;
+        return `
+          <tr>
+            <td style="white-space:nowrap;">${new Date(m.created_at).toLocaleDateString()}</td>
+            <td><strong>${escapeHtml(m.customer_name)}</strong></td>
+            <td><a href="mailto:${escapeHtml(m.customer_email)}" style="color:#e67e22;">${escapeHtml(m.customer_email)}</a></td>
+            <td>${escapeHtml(m.subject || 'No subject')}</td>
+            <td style="max-width:250px; word-wrap:break-word;">${escapeHtml(m.message)}</td>
+            <td><span class="status-badge ${statusClass}">${escapeHtml(m.status || 'new')}</span></td>
+            <td>
+              ${m.status !== 'read' ? `<button class="btn-sm btn-success" onclick="markRead('${m.id}')"><i class="fas fa-check"></i> Mark Read</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
 
-  checkAuth();
-  loadMessages();
+    window.markRead = async (id) => {
+      const { error } = await supabaseClient
+        .from('contact_messages')
+        .update({ status: 'read' })
+        .eq('id', id);
+      if (error) alert('Error: ' + error.message);
+      else loadMessages();
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
+    }
+
+    checkAuth();
+    loadMessages();
+  })();
 </script>
 </body>
 </html>

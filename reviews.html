@@ -9,23 +9,26 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; }
-    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; }
+    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+    .admin-header h1 { font-size: 1.4rem; }
     .nav-links { background: white; padding: 0.5rem 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; }
-    .nav-links a { text-decoration: none; color: #475569; }
+    .nav-links a { text-decoration: none; color: #475569; padding: 0.5rem 0; }
     .nav-links a.active { color: #e67e22; border-bottom: 2px solid #e67e22; }
     .content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
     .card { background: white; border-radius: 24px; padding: 1.5rem; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    .btn-sm { padding: 0.3rem 0.8rem; border-radius: 30px; border: none; cursor: pointer; margin: 2px; }
+    .btn-sm { padding: 0.3rem 0.8rem; border-radius: 30px; border: none; cursor: pointer; margin: 2px; font-size: 0.8rem; }
     .btn-success { background: #10b981; color: white; }
     .btn-danger { background: #ef4444; color: white; }
+    .logout-btn { background: #ef4444; color: white; border: none; padding: 0.4rem 1rem; border-radius: 30px; cursor: pointer; }
+    .review-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
   </style>
 </head>
 <body>
 <div class="admin-header">
   <h1><i class="fas fa-star"></i> Reviews</h1>
-  <button id="logoutBtn">Logout</button>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
 </div>
 <div class="nav-links">
   <a href="dashboard.html">Dashboard</a>
@@ -36,7 +39,7 @@
 </div>
 <div class="content">
   <div class="card">
-    <h3>Customer Reviews</h3>
+    <h3><i class="fas fa-list"></i> Customer Reviews</h3>
     <table id="reviewsTable">
       <thead><tr><th>Customer</th><th>Rating</th><th>Comment</th><th>Approved</th><th>Actions</th></tr></thead>
       <tbody></tbody>
@@ -45,57 +48,87 @@
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  (function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) window.location.href = 'login.html';
-  }
-
-  async function loadReviews() {
-    const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
-    const tbody = document.querySelector('#reviewsTable tbody');
-    tbody.innerHTML = data.map(r => `
-      <tr>
-        <td>${escapeHtml(r.customer_name)}</td>
-        <td>${r.rating}★</td>
-        <td>${escapeHtml(r.comment)}</td>
-        <td>${r.is_approved ? '✅ Yes' : '❌ No'}</td>
-        <td>
-          ${!r.is_approved ? `<button class="btn-sm btn-success" onclick="approveReview('${r.id}')">Approve</button>` : ''}
-          <button class="btn-sm btn-danger" onclick="deleteReview('${r.id}')">Delete</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-
-  window.approveReview = async (id) => {
-    await supabase.from('reviews').update({ is_approved: true }).eq('id', id);
-    loadReviews();
-  };
-
-  window.deleteReview = async (id) => {
-    if (confirm('Delete this review?')) {
-      await supabase.from('reviews').delete().eq('id', id);
-      loadReviews();
+    async function checkAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) window.location.href = 'login.html';
     }
-  };
 
-  document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'login.html';
-  });
+    async function loadReviews() {
+      const { data, error } = await supabaseClient
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading reviews:', error);
+        return;
+      }
 
-  function escapeHtml(str) {
-    return str?.replace(/[&<>]/g, function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];
-    }) || '';
-  }
+      const tbody = document.querySelector('#reviewsTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:#6b7280;">No reviews yet</td></tr>`;
+        return;
+      }
 
-  checkAuth();
-  loadReviews();
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.customer_name)}</strong></td>
+          <td><span style="color:#f4b942;">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span></td>
+          <td>${escapeHtml(r.comment)}</td>
+          <td>${r.is_approved ? '<span style="color:#10b981;">✅ Approved</span>' : '<span style="color:#f59e0b;">⏳ Pending</span>'}</td>
+          <td>
+            ${!r.is_approved ? `<button class="btn-sm btn-success" onclick="approveReview('${r.id}')"><i class="fas fa-check"></i> Approve</button>` : ''}
+            <button class="btn-sm btn-danger" onclick="deleteReview('${r.id}')"><i class="fas fa-trash"></i> Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    window.approveReview = async (id) => {
+      if (confirm('Approve this review?')) {
+        const { error } = await supabaseClient
+          .from('reviews')
+          .update({ is_approved: true })
+          .eq('id', id);
+        if (error) alert('Error: ' + error.message);
+        else loadReviews();
+      }
+    };
+
+    window.deleteReview = async (id) => {
+      if (confirm('Delete this review permanently?')) {
+        const { error } = await supabaseClient
+          .from('reviews')
+          .delete()
+          .eq('id', id);
+        if (error) alert('Error: ' + error.message);
+        else loadReviews();
+      }
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
+    }
+
+    checkAuth();
+    loadReviews();
+  })();
 </script>
 </body>
 </html>
