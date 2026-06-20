@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookings | A+Connect Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; }
+    .admin-header { background: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+    .admin-header h1 { font-size: 1.4rem; }
+    .nav-links { background: white; padding: 0.5rem 2rem; display: flex; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+    .nav-links a { text-decoration: none; color: #475569; padding: 0.5rem 0; }
+    .nav-links a.active { color: #e67e22; border-bottom: 2px solid #e67e22; }
+    .content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+    .card { background: white; border-radius: 24px; padding: 1.5rem; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .badge {
+      padding: 0.2rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-processing { background: #dbeafe; color: #1e40af; }
+    .badge-completed { background: #d1fae5; color: #065f46; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
+    .btn-sm { padding: 0.3rem 0.8rem; border-radius: 30px; border: none; cursor: pointer; margin: 2px; font-size: 0.75rem; }
+    .btn-primary { background: #1e293b; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .logout-btn { background: #ef4444; color: white; border: none; padding: 0.4rem 1rem; border-radius: 30px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="admin-header">
+  <h1><i class="fas fa-shopping-cart"></i> Bookings</h1>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
+</div>
+<div class="nav-links">
+  <a href="dashboard.html">Dashboard</a>
+  <a href="templates.html">Templates</a>
+  <a href="messages.html">Messages</a>
+  <a href="reviews.html">Reviews</a>
+  <a href="about.html">About</a>
+  <a href="bookings.html" class="active">Bookings</a>
+</div>
+<div class="content">
+  <div class="card">
+    <h3><i class="fas fa-list"></i> All Bookings</h3>
+    <table id="bookingsTable">
+      <thead><tr><th>Date</th><th>Customer</th><th>Email</th><th>Template</th><th>Reference</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function checkAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) window.location.href = 'login.html';
+    }
+
+    async function loadBookings() {
+      const { data, error } = await supabaseClient
+        .from('bookings')
+        .select(`
+          *,
+          projects (title)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const tbody = document.querySelector('#bookingsTable tbody');
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:#6b7280;">No bookings yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(b => {
+        const statusClass = `badge-${b.status || 'pending'}`;
+        return `
+          <tr>
+            <td style="white-space:nowrap;">${new Date(b.created_at).toLocaleDateString()}</td>
+            <td><strong>${escapeHtml(b.customer_name)}</strong></td>
+            <td>${escapeHtml(b.customer_email)}</td>
+            <td>${b.projects ? escapeHtml(b.projects.title) : 'Unknown'}</td>
+            <td><code>${escapeHtml(b.reference_number)}</code></td>
+            <td><span class="badge ${statusClass}">${escapeHtml(b.status || 'pending')}</span></td>
+            <td>
+              <select class="status-select" data-id="${b.id}" style="padding:0.3rem; border-radius:20px; border:1px solid #cbd5e1;">
+                <option value="pending" ${b.status === 'pending' ? 'selected' : ''}>Pending</option>
+                <option value="processing" ${b.status === 'processing' ? 'selected' : ''}>Processing</option>
+                <option value="completed" ${b.status === 'completed' ? 'selected' : ''}>Completed</option>
+                <option value="cancelled" ${b.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+              </select>
+              <button class="btn-sm btn-primary update-status-btn" data-id="${b.id}">Update</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Attach event listeners for status updates
+      document.querySelectorAll('.update-status-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          const id = this.dataset.id;
+          const select = document.querySelector(`.status-select[data-id="${id}"]`);
+          const newStatus = select.value;
+          const { error } = await supabaseClient
+            .from('bookings')
+            .update({ status: newStatus })
+            .eq('id', id);
+          if (error) alert('Error: ' + error.message);
+          else loadBookings(); // refresh
+        });
+      });
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      });
+    }
+
+    checkAuth();
+    loadBookings();
+  })();
+</script>
+</body>
+</html>
