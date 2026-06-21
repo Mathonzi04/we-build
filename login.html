@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Login | A+Connect</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* (your existing styles unchanged) */
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -52,32 +53,72 @@
       font-size: 0.8rem;
       color: #c2410c;
     }
+    .forgot-link {
+      display: block;
+      text-align: right;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .forgot-link a {
+      color: #1e293b;
+      text-decoration: none;
+      border-bottom: 1px dotted #94a3b8;
+    }
+    .forgot-link a:hover {
+      border-bottom: 1px solid #1e293b;
+    }
   </style>
 </head>
 <body>
 <div class="login-card">
-  <h2><i class="fas fa-lock"></i> A+Connect Admin</h2>
-  <input type="email" id="email" placeholder="Email address">
-  <input type="password" id="password" placeholder="Password">
+  <h2>A+Connect Admin</h2>
+  <input type="email" id="email" placeholder="Email address" />
+  <input type="password" id="password" placeholder="Password" />
   <button id="loginBtn">Sign In</button>
   <div id="message" class="message"></div>
+  <!-- Forgot Password link -->
+  <div class="forgot-link">
+    <a href="#" id="forgotLink">Forgot password?</a>
+  </div>
 </div>
 
 <script>
   (function() {
     const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // --- Login ---
     document.getElementById('loginBtn').addEventListener('click', async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const msgDiv = document.getElementById('message');
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         msgDiv.innerText = error.message;
       } else {
         window.location.href = 'dashboard.html';
+      }
+    });
+
+    // --- Forgot Password ---
+    document.getElementById('forgotLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const msgDiv = document.getElementById('message');
+      if (!email) {
+        msgDiv.innerText = 'Please enter your email address first.';
+        return;
+      }
+      // Send reset email – redirect to reset-password.html after click
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://your-app.com/reset-password.html'  // <-- CHANGE to your actual URL
+      });
+      if (error) {
+        msgDiv.innerText = error.message;
+      } else {
+        msgDiv.innerText = 'Password reset link sent to your email.';
+        msgDiv.style.color = '#15803d';  // green for success
       }
     });
   })();
