@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>A+Connect | Terms & Conditions</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #ffffff;
+      color: #111827;
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ---------- HEADER ---------- */
+    .header {
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+    .nav-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0.8rem 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .logo-area { display: flex; align-items: center; gap: 12px; }
+    .logo-img { height: 48px; width: auto; object-fit: contain; }
+    .logo-text {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1e293b, #e67e22);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .nav-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .nav-links a {
+      text-decoration: none;
+      font-weight: 500;
+      color: #2c3e4e;
+      transition: color 0.2s;
+      font-size: 0.95rem;
+    }
+    .nav-links a:hover { color: #e67e22; }
+
+    /* ---------- CONTENT ---------- */
+    .legal-content {
+      padding: 3rem 0 4rem;
+    }
+    .legal-content h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: #1e293b;
+    }
+    .legal-content .last-updated {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #eef2f8;
+      padding-bottom: 0.5rem;
+    }
+    .legal-content h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 2.2rem;
+      margin-bottom: 0.8rem;
+      color: #1e293b;
+      border-left: 5px solid #e67e22;
+      padding-left: 1rem;
+    }
+    .legal-content h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      color: #2c3e4e;
+    }
+    .legal-content p, .legal-content li {
+      color: #374151;
+      margin-bottom: 0.8rem;
+    }
+    .legal-content ul {
+      padding-left: 1.8rem;
+      margin-bottom: 1rem;
+    }
+    .legal-content ul li { margin-bottom: 0.4rem; }
+    .legal-content strong { color: #1e293b; }
+    .legal-content .highlight-box {
+      background: #fefce8;
+      padding: 1.2rem 1.5rem;
+      border-radius: 24px;
+      border-left: 6px solid #e67e22;
+      margin: 1.5rem 0;
+    }
+    .legal-content .highlight-box i { color: #e67e22; margin-right: 8px; }
+    .legal-content .table-of-contents {
+      background: #f8fafc;
+      padding: 1.2rem 1.8rem;
+      border-radius: 24px;
+      margin: 1.5rem 0;
+    }
+    .legal-content .table-of-contents a {
+      color: #e67e22;
+      text-decoration: none;
+    }
+    .legal-content .table-of-contents a:hover { text-decoration: underline; }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+      background: #fefefe;
+      border-top: 1px solid #eef2f8;
+      padding: 2.5rem 0 1.2rem;
+    }
+    .footer-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .footer-col { flex: 1; min-width: 180px; }
+    .footer-col h4 { font-size: 1.1rem; margin-bottom: 1rem; font-weight: 600; }
+    .footer-col p, .footer-col a {
+      font-size: 0.85rem;
+      color: #4b5563;
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    .footer-col a:hover { color: #e67e22; }
+    .social-icons { display: flex; gap: 1rem; margin-top: 0.5rem; }
+    .social-icons a { font-size: 1.6rem; color: #2d3e50; transition: 0.2s; }
+    .social-icons a:hover { color: #e67e22; }
+    .copyright {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.7rem;
+      color: #7f8c8d;
+      border-top: 1px solid #eef2f0;
+      padding-top: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .nav-container { flex-direction: column; align-items: center; }
+      .nav-links { justify-content: center; gap: 1rem; }
+      .legal-content h1 { font-size: 1.8rem; }
+      .legal-content h2 { font-size: 1.3rem; }
+      .footer-grid { flex-direction: column; text-align: center; }
+      .social-icons { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="nav-container">
+    <div class="logo-area">
+      <img class="logo-img" src="https://sdrwdvvrojhhxnyydsao.supabase.co/storage/v1/object/public/team-profiles/team/1781684430536-c476n9.png" alt="A+Connect Logo">
+      <span class="logo-text">A+Connect</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html#home">Home</a>
+      <a href="index.html#templates">Templates</a>
+      <a href="index.html#services">Services</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+  </div>
+</header>
+
+<!-- ========== TERMS CONTENT ========== -->
+<main class="container legal-content">
+  <h1><i class="fas fa-gavel" style="color:#e67e22;"></i> Terms &amp; Conditions</h1>
+  <div class="last-updated">Last updated: 6 July 2026</div>
+
+  <p>Welcome to <strong>A+Connect</strong>. By using our website, purchasing a template, or engaging our services, you agree to the following terms. Please read them carefully.</p>
+
+  <div class="table-of-contents">
+    <strong>Jump to:</strong><br>
+    <a href="#section1">1. Our Services</a> • 
+    <a href="#section2">2. Your Obligations</a> • 
+    <a href="#section3">3. Pricing & Payment</a> • 
+    <a href="#section4">4. Intellectual Property</a> • 
+    <a href="#section5">5. Liability</a> • 
+    <a href="#section6">6. Cancellation & Refund</a> • 
+    <a href="#section7">7. Governing Law</a>
+  </div>
+
+  <h2 id="section1">1. Our Services</h2>
+  <p>A+Connect offers pre-designed website templates that we customize, launch, host, and manage for South African businesses and entrepreneurs. Our services include:</p>
+  <ul>
+    <li>One-time setup fee (includes template customization, domain registration for 1st year, and initial launch).</li>
+    <li>Monthly maintenance fee (includes hosting, security updates, weekly backups, 24/7 uptime monitoring, and priority support).</li>
+  </ul>
+  <p>We reserve the right to modify or discontinue any template or service with reasonable notice.</p>
+
+  <h2 id="section2">2. Your Obligations</h2>
+  <p>As a client, you agree to:</p>
+  <ul>
+    <li>Provide accurate, complete, and lawful content (text, images, logos) for your website.</li>
+    <li>Ensure you own the rights to any content you supply, or have permission to use it.</li>
+    <li>Not use your website for illegal activities, fraud, or to distribute malware.</li>
+    <li>Promptly respond to our requests for feedback or approvals during the build process.</li>
+    <li>Pay all fees on time as outlined in your invoice.</li>
+  </ul>
+
+  <h2 id="section3">3. Pricing &amp; Payment</h2>
+  <ul>
+    <li><strong>Setup Fee:</strong> A one-time payment is required before we begin customization. This fee is non-refundable once work has commenced.</li>
+    <li><strong>Monthly Fee:</strong> Billed in advance on the same date each month via invoice. Late payments may result in suspension of services (hosting and support) after 14 days overdue.</li>
+    <li>All prices are in <strong>South African Rand (ZAR)</strong> and include VAT where applicable.</li>
+    <li>We reserve the right to adjust monthly fees with 30 days' notice.</li>
+  </ul>
+
+  <h2 id="section4">4. Intellectual Property</h2>
+  <div class="highlight-box">
+    <i class="fas fa-copyright"></i> <strong>Template Code:</strong> The underlying HTML, CSS, JavaScript, and design elements of our templates remain the intellectual property of A+Connect. We grant you a <strong>non-exclusive, perpetual license</strong> to use the template for your business website.
+  </div>
+  <ul>
+    <li><strong>Client Content:</strong> You retain full ownership of your business name, logo, images, text, and any custom content you provide.</li>
+    <li><strong>Custom Work:</strong> Any bespoke code or design we create specifically for you (not part of the standard template) becomes your property upon final payment.</li>
+    <li>You may not resell, redistribute, or sublicense our templates to third parties.</li>
+  </ul>
+
+  <h2 id="section5">5. Limitation of Liability</h2>
+  <ul>
+    <li>A+Connect provides services "as is" and makes no warranties about uninterrupted or error-free operation, though we strive for 99.9% uptime.</li>
+    <li>To the fullest extent permitted by South African law, we are <strong>not liable</strong> for:
+      <ul>
+        <li>Loss of profits, revenue, or data (except where caused by our gross negligence).</li>
+        <li>Indirect or consequential damages arising from the use of your website.</li>
+        <li>Third-party content, plugins, or integrations you choose to add.</li>
+      </ul>
+    </li>
+    <li>Our total liability to you in any claim shall not exceed the total fees paid by you in the 6 months preceding the claim.</li>
+  </ul>
+
+  <h2 id="section6">6. Cancellation &amp; Refund</h2>
+  <ul>
+    <li><strong>Monthly Maintenance:</strong> You may cancel your monthly subscription at any time with 7 days' notice. Upon cancellation:
+      <ul>
+        <li>You retain full ownership of your completed website (files and database).</li>
+        <li>We will provide you with a full backup of your site.</li>
+        <li>Hosting, updates, and support will cease 7 days after the notice.</li>
+      </ul>
+    </li>
+    <li><strong>Setup Fee:</strong> Non-refundable after customization work begins. If we have not started work, we may refund at our discretion.</li>
+    <li>No refunds are given for partial monthly periods.</li>
+  </ul>
+
+  <h2 id="section7">7. Governing Law &amp; Disputes</h2>
+  <ul>
+    <li>These terms are governed by the laws of the <strong>Republic of South Africa</strong>.</li>
+    <li>Any disputes shall first be attempted to be resolved through good-faith negotiation. If unresolved, disputes shall be referred to arbitration in Johannesburg in terms of the Arbitration Act 42 of 1965.</li>
+    <li>Both parties agree to submit to the exclusive jurisdiction of the South African courts.</li>
+  </ul>
+
+  <h2>8. General</h2>
+  <ul>
+    <li>We may update these terms from time to time. Continued use of our services constitutes acceptance of the updated terms.</li>
+    <li>If any provision is held to be invalid, the remaining provisions shall continue in full force and effect.</li>
+    <li>These terms constitute the entire agreement between you and A+Connect.</li>
+  </ul>
+
+  <p style="margin-top: 2rem; font-size: 0.9rem; color: #6b7280;"><i class="fas fa-envelope"></i> For any questions regarding these terms, contact us at <a href="mailto:hello@aplustconnect.com" style="color:#e67e22;">hello@aplustconnect.com</a>.</p>
+</main>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h4><i class="fas fa-code"></i> A+Connect</h4>
+        <p>Premium templates + custom build.<br>One purchase = fully functional website.</p>
+        <div class="social-icons">
+          <a href="#" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+          <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+          <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Explore</h4>
+        <a href="index.html#templates">Templates</a>
+        <a href="index.html#services">Services</a>
+        <a href="index.html#team">Team</a>
+        <a href="privacy-policy.html">Privacy Policy</a>
+        <a href="terms-and-conditions.html">Terms &amp; Conditions</a>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <p><i class="fas fa-envelope"></i> hello@aplustconnect.com</p>
+        <p><i class="fas fa-phone"></i> +27 12 345 6789</p>
+        <p><i class="fas fa-map-marker-alt"></i> Johannesburg, SA</p>
+      </div>
+      <div class="footer-col">
+        <div style="background:#fef7e0; padding:0.8rem 1rem; border-radius:40px; margin-top:1rem; font-size:0.85rem; text-align:center;">
+          🌟 "Your website is your 24/7 salesperson."
+        </div>
+      </div>
+    </div>
+    <div class="copyright">
+      <i class="far fa-copyright"></i> 2025 A+Connect — Empowering entrepreneurs.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
