@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manage Templates | A+Connect Admin</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; }
@@ -33,6 +33,8 @@
     .preview-img { width: 80px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
     .form-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
     .logout-btn { background: #ef4444; color: white; border: none; padding: 0.4rem 1rem; border-radius: 30px; cursor: pointer; }
+    .github-link { color: #24292e; text-decoration: none; font-size: 1.3rem; }
+    .github-link:hover { color: #0366d6; }
   </style>
 </head>
 <body>
@@ -80,6 +82,9 @@
       <div class="form-group"><label>Once-off Price (ZAR) *</label><input id="price" type="number" required></div>
       <div class="form-group"><label>Monthly Price (ZAR)</label><input id="monthly" type="number" value="0"></div>
       
+      <!-- NEW: GitHub Link -->
+      <div class="form-group"><label>GitHub Repository URL</label><input id="githubUrl" type="url" placeholder="https://github.com/your/repo"></div>
+      
       <input type="hidden" id="editingId" value="">
       <button type="submit" id="submitBtn">Create Template</button>
       <button type="button" id="cancelEditBtn" class="btn-secondary" style="display:none;">Cancel Edit</button>
@@ -91,7 +96,10 @@
   <div class="card">
     <h3><i class="fas fa-list"></i> Existing Templates</h3>
     <table id="templatesTable">
-      <thead><tr><th>Images</th><th>Title</th><th>Price</th><th>Monthly</th><th>Actions</th></tr></thead>
+      <thead><tr>
+        <th>Images</th><th>Title</th><th>Price</th><th>Monthly</th>
+        <th>GitHub</th><th>Actions</th>
+      </tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -202,6 +210,7 @@
       const description = document.getElementById('description').value.trim();
       const price = parseInt(document.getElementById('price').value);
       const monthly = parseInt(document.getElementById('monthly').value) || 0;
+      const githubUrl = document.getElementById('githubUrl').value.trim();
       const benefits = getBenefits();
       if (benefits.length < 4) {
         alert('Please provide at least 4 benefits');
@@ -229,7 +238,8 @@
         price_zar: price,
         monthly_fee: monthly,
         images: images,
-        features: benefits
+        features: benefits,
+        github_url: githubUrl || null   // <-- NEW
       };
 
       let error;
@@ -261,6 +271,7 @@
       document.getElementById('image1').value = '';
       document.getElementById('image2').value = '';
       document.getElementById('image3').value = '';
+      document.getElementById('githubUrl').value = '';
       setBenefits(['', '', '', '']);
     }
 
@@ -272,6 +283,7 @@
       document.getElementById('description').value = data.description || '';
       document.getElementById('price').value = data.price_zar;
       document.getElementById('monthly').value = data.monthly_fee || 0;
+      document.getElementById('githubUrl').value = data.github_url || '';
       setBenefits(data.features || []);
       existingImageUrls = data.images || [];
       const previewDivs = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
@@ -306,21 +318,26 @@
       if (error) return;
       const tbody = document.querySelector('#templatesTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:#6b7280;">No templates yet</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#6b7280;">No templates yet</td></tr>`;
         return;
       }
-      tbody.innerHTML = data.map(t => `
+      tbody.innerHTML = data.map(t => {
+        const githubLink = t.github_url 
+          ? `<a href="${escapeHtml(t.github_url)}" target="_blank" class="github-link"><i class="fab fa-github"></i></a>` 
+          : '—';
+        return `
         <tr>
           <td>${t.images && t.images.length ? `<img src="${t.images[0]}" class="template-img">` : '—'}</td>
           <td><strong>${escapeHtml(t.title)}</strong></td>
           <td>R${t.price_zar}</td>
           <td>R${t.monthly_fee || 0}</td>
+          <td>${githubLink}</td>
           <td>
             <button class="btn-warning" onclick="editTemplate('${t.id}')">Edit</button>
             <button class="btn-danger" onclick="deleteTemplate('${t.id}')">Delete</button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     // ---------- LOGOUT ----------
