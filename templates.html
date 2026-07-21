@@ -79,8 +79,8 @@
         <button type="button" id="addBenefitBtn" class="btn-secondary" style="margin-top:0.5rem;"><i class="fas fa-plus"></i> Add another benefit</button>
       </div>
       
-      <div class="form-group"><label>Once-off Price (ZAR) *</label><input id="price" type="number" required></div>
-      <div class="form-group"><label>Monthly Price (ZAR)</label><input id="monthly" type="number" value="0"></div>
+      <div class="form-group"><label>Set Up Price (USD) *</label><input id="price" type="number" required></div>
+      <div class="form-group"><label>Monthly Price (USD)</label><input id="monthly" type="number" value="0"></div>
       
       <!-- NEW: GitHub Link -->
       <div class="form-group"><label>GitHub Repository URL</label><input id="githubUrl" type="url" placeholder="https://github.com/your/repo"></div>
@@ -329,8 +329,8 @@
         <tr>
           <td>${t.images && t.images.length ? `<img src="${t.images[0]}" class="template-img">` : '—'}</td>
           <td><strong>${escapeHtml(t.title)}</strong></td>
-          <td>R${t.price_zar}</td>
-          <td>R${t.monthly_fee || 0}</td>
+          <td>USD${t.price_zar}</td>
+          <td>USD${t.monthly_fee || 0}</td>
           <td>${githubLink}</td>
           <td>
             <button class="btn-warning" onclick="editTemplate('${t.id}')">Edit</button>
