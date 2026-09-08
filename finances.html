@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Finance | Subscription Lifecycle</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #f0f4f9;
+            color: #0b1a2b;
+        }
+        .admin-header {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0.9rem 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            backdrop-filter: blur(4px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .admin-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 700;
+            font-size: 1.35rem;
+        }
+        .admin-header .brand i {
+            background: linear-gradient(145deg, #e67e22, #d35400);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logout-btn {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            padding: 0.45rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logout-btn:hover {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #b91c1c;
+        }
+        .nav-links {
+            background: #fff;
+            padding: 0 2.5rem;
+            display: flex;
+            gap: 0.25rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: #64748b;
+            padding: 0.8rem 1.2rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: 40px 40px 0 0;
+            transition: 0.2s;
+            position: relative;
+        }
+        .nav-links a i {
+            margin-right: 0.5rem;
+            opacity: 0.6;
+        }
+        .nav-links a:hover {
+            color: #0b1a2b;
+            background: #f8fafc;
+        }
+        .nav-links a.active {
+            color: #e67e22;
+            background: #fef9f0;
+            font-weight: 600;
+        }
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 1.2rem;
+            right: 1.2rem;
+            height: 2.5px;
+            background: linear-gradient(90deg, #e67e22, #f39c12);
+            border-radius: 4px 4px 0 0;
+        }
+        .content {
+            padding: 2.5rem;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .page-header h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+        }
+        .page-header h2 i {
+            color: #e67e22;
+            margin-right: 0.5rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #ffffff;
+            padding: 1.5rem 1.2rem 1.2rem;
+            border-radius: 28px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .stat-card .label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-top: 0.2rem;
+        }
+        .stat-card.danger .value {
+            color: #b91c1c;
+        }
+        .stat-card.warning .value {
+            color: #b45309;
+        }
+        .stat-card.success .value {
+            color: #16a34a;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            background: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+            border: 1px solid #f1f5f9;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+        .toolbar .search-wrap {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border-radius: 40px;
+            padding: 0 1rem;
+            border: 1px solid #e2e8f0;
+        }
+        .toolbar .search-wrap:focus-within {
+            border-color: #e67e22;
+            background: white;
+        }
+        .toolbar .search-wrap i {
+            color: #94a3b8;
+        }
+        .toolbar .search-wrap input {
+            border: none;
+            background: transparent;
+            padding: 0.6rem 0.6rem;
+            width: 100%;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        .toolbar .filter-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .filter-group select {
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .toolbar .actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+        .btn {
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            background: #e67e22;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #d35400;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .btn-outline:hover {
+            background: #f8fafc;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #15803d;
+        }
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-info:hover {
+            background: #2563eb;
+        }
+        .btn-sm {
+            padding: 0.3rem 0.9rem;
+            font-size: 0.8rem;
+        }
+        .table-wrap {
+            background: white;
+            border-radius: 28px;
+            padding: 0 0.5rem 0.5rem;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            overflow-x: auto;
+        }
+        .table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .table-wrap th {
+            text-align: left;
+            padding: 1rem 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .table-wrap td {
+            padding: 0.8rem;
+            border-bottom: 1px solid #f8fafc;
+            vertical-align: middle;
+        }
+        .table-wrap tr:last-child td {
+            border-bottom: none;
+        }
+        .subscriber-name {
+            font-weight: 600;
+        }
+        .subscriber-email {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+        .client-code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-weight: 700;
+            font-size: 0.75rem;
+            background: #f1f5f9;
+            padding: 0.15rem 0.6rem;
+            border-radius: 40px;
+            color: #0b1a2b;
+            letter-spacing: 0.3px;
+            display: inline-block;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .timer-cell {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .timer-cell .safe {
+            color: #166534;
+        }
+        .timer-cell .invoice-sent {
+            color: #b45309;
+        }
+        .timer-cell .overdue {
+            color: #b91c1c;
+        }
+        .timer-cell .blocked {
+            color: #991b1b;
+        }
+        .actions-cell {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .actions-cell button {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        .actions-cell button:hover {
+            background: #f1f5f9;
+        }
+        .actions-cell .btn-edit {
+            color: #e67e22;
+        }
+        .actions-cell .btn-history {
+            color: #3b82f6;
+        }
+        .actions-cell .btn-suspend {
+            color: #8b5cf6;
+        }
+        .actions-cell .btn-delete {
+            color: #ef4444;
+        }
+        .actions-cell .btn-pdf {
+            color: #dc2626;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #94a3b8;
+        }
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 28px;
+            max-width: 520px;
+            width: 100%;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #94a3b8;
+        }
+        .modal-close:hover {
+            color: #0b1a2b;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-group label {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.3rem;
+            font-size: 0.9rem;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            background: #f8fafc;
+        }
+        .form-group textarea {
+            border-radius: 20px;
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #e67e22;
+            background: white;
+            outline: none;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #0b1a2b;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 500;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: 0.3s;
+            pointer-events: none;
+            z-index: 2000;
+            max-width: 90vw;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (max-width: 640px) {
+            .admin-header {
+                padding: 0.7rem 1.2rem;
+                flex-wrap: wrap;
+            }
+            .nav-links {
+                padding: 0 1rem;
+                gap: 0;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+            .nav-links a {
+                padding: 0.7rem 0.9rem;
+                font-size: 0.8rem;
+                white-space: nowrap;
+            }
+            .content {
+                padding: 1.2rem;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .toolbar .actions {
+                margin-left: 0;
+            }
+            .actions-cell {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="admin-header">
+        <div class="brand">
+            <i class="fas fa-crown"></i>
+            <span>A+Connect</span>
+            <span style="font-weight:400; font-size:0.85rem; color:#94a3b8; margin-left:0.2rem;">Admin</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </header>
+
+    <nav class="nav-links">
+        <a href="dashboard.html"><i class="fas fa-th-large"></i>Dashboard</a>
+        <a href="templates.html"><i class="fas fa-code"></i>Templates</a>
+        <a href="messages.html"><i class="fas fa-envelope"></i>Messages</a>
+        <a href="bookings.html"><i class="fas fa-calendar-check"></i>Bookings</a>
+        <a href="reviews.html"><i class="fas fa-star"></i>Reviews</a>
+        <a href="clients.html"><i class="fas fa-users"></i>Clients</a>
+        <a href="email.html"><i class="fas fa-paper-plane"></i>Email</a>
+        <a href="finances.html" class="active"><i class="fas fa-coins"></i>Finance</a>
+        <a href="about.html"><i class="fas fa-info-circle"></i>About</a>
+    </nav>
+
+    <main class="content">
+        <div class="page-header">
+            <h2><i class="fas fa-chart-line"></i> Subscription Lifecycle</h2>
+            <span style="color:#64748b; font-size:0.9rem;">Manage payments, reminders, and auto‑blocking</span>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="label">Total Clients</div><div class="value" id="totalCount">0</div></div>
+            <div class="stat-card"><div class="label">Active</div><div class="value" id="activeCount">0</div></div>
+            <div class="stat-card danger"><div class="label">Blocked</div><div class="value" id="blockedCount">0</div></div>
+            <div class="stat-card warning"><div class="label">Overdue</div><div class="value" id="overdueCount">0</div></div>
+            <div class="stat-card success"><div class="label">Received This Month</div><div class="value" id="receivedMonth">$0</div></div>
+            <div class="stat-card"><div class="label">Monthly Revenue</div><div class="value" id="monthlyRevenue">$0</div></div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search by name, email or client ID..." />
+            </div>
+            <div class="filter-group">
+                <select id="statusFilter">
+                    <option value="all">All status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Blocked</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+                <button class="btn btn-outline" id="clearFiltersBtn"><i class="fas fa-times"></i> Clear</button>
+            </div>
+            <div class="actions">
+                <button class="btn btn-info" id="customInvoiceBtn"><i class="fas fa-file-invoice"></i> Custom Invoice</button>
+                <button class="btn btn-primary" id="sendRemindersBtn"><i class="fas fa-bell"></i> Send Reminders</button>
+                <button class="btn btn-success" id="sendInvoiceBtn"><i class="fas fa-envelope"></i> Send Invoices</button>
+                <button class="btn btn-outline" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:30px;"><input type="checkbox" id="selectAll" /></th>
+                        <th>Client ID</th>
+                        <th>Subscriber</th>
+                        <th>Status</th>
+                        <th>Monthly Fee</th>
+                        <th>Total Paid</th>
+                        <th>Timer</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            <div id="emptyState" class="empty-state" style="display:none;">
+                <i class="fas fa-user-slash"></i>
+                <p>No clients found.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALS -->
+
+    <!-- Edit Payment -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-pen" style="color:#e67e22;"></i> Edit Payment</h3>
+                <button class="modal-close" data-close="editModal">&times;</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editClientId" />
+                <div class="form-group">
+                    <label>Client</label>
+                    <input type="text" id="editClientName" disabled style="background:#f1f5f9;" />
+                </div>
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input type="text" id="editClientCode" disabled style="background:#f1f5f9;font-family:monospace;" />
+                </div>
+                <div class="form-group">
+                    <label>Monthly Fee ($)</label>
+                    <input type="number" id="editFee" step="0.01" min="0" required />
+                </div>
+                <div class="form-group">
+                    <label>Next Due Date</label>
+                    <input type="date" id="editDueDate" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-close="editModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Send Invoices (bulk) -->
+    <div class="modal-overlay" id="invoiceModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-envelope" style="color:#16a34a;"></i> Send Invoices</h3>
+                <button class="modal-close" data-close="invoiceModal">&times;</button>
+            </div>
+            <div style="margin-bottom:1rem; font-size:0.9rem; color:#64748b;">
+                Select clients to send an invoice email with PDF attachment. Optionally record a payment.
+            </div>
+            <div id="invoiceClientList" style="max-height:250px; overflow-y:auto; border:1px solid #f1f5f9; border-radius:20px; padding:0.5rem 0;"></div>
+            <div class="form-group" style="margin-top:1rem;">
+                <label>Record payment? (optional)</label>
+                <input type="date" id="invoicePaymentDate" />
+                <span style="font-size:0.8rem; color:#94a3b8;">If set, a payment will be recorded and due date extended by 1 month.</span>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="invoiceAttachPdf" checked /> Attach PDF invoice</label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" data-close="invoiceModal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmSendInvoice"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Invoice Modal -->
+    <div class="modal-overlay" id="customInvoiceModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-invoice" style="color:#3b82f6;"></i> Custom Invoice</h3>
+                <button class="modal-close" data-close="customInvoiceModal">&times;</button>
+            </div>
+            <form id="customInvoiceForm">
+                <div class="form-group">
+                    <label>Client</label>
+                    <select id="customInvoiceClient">
+                        <option value="">— Select a client —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Recipient Email</label>
+                    <input type="email" id="customInvoiceEmail" required />
+                </div>
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" id="customInvoiceSubject" placeholder="Invoice for services" required />
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea id="customInvoiceBody" placeholder="Dear ...,&#10;&#10;Please find attached your invoice...&#10;&#10;Thank you" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="customInvoiceAttachPdf" checked /> Attach PDF invoice</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-close="customInvoiceModal">Cancel</button>
+                    <button type="submit" class="btn btn-info"><i class="fas fa-paper-plane"></i> Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-history" style="color:#3b82f6;"></i> Payment History</h3>
+                <button class="modal-close" data-close="historyModal">&times;</button>
+            </div>
+            <div id="historyContent">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem;">
+                    <div>
+                        <p style="font-weight:700; font-size:1.1rem;" id="historyClientName"></p>
+                        <p style="color:#64748b; font-size:0.85rem; font-family:monospace;" id="historyClientCode"></p>
+                    </div>
+                    <span class="client-code" id="historyClientCodeBadge"></span>
+                </div>
+                <div style="display:flex; gap:1.5rem; margin:1rem 0; flex-wrap:wrap;">
+                    <span><strong>Fee:</strong> $<span id="historyFee"></span></span>
+                    <span><strong>Status:</strong> <span id="historyStatus"></span></span>
+                    <span><strong>Total Paid:</strong> $<span id="historyTotalPaid"></span></span>
+                </div>
+                <hr style="border-color:#f1f5f9; margin:0.8rem 0;" />
+                <div id="historyList" style="max-height:250px; overflow-y:auto;"></div>
+                <div style="margin-top:1rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" id="downloadPdfBtn"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <button class="btn btn-success btn-sm" id="recordPaymentBtn"><i class="fas fa-plus-circle"></i> Record Payment</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" data-close="historyModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+            const SUPABASE_ANON_KEY =
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // ── Auth ──
+            async function checkAuth() {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) window.location.href = 'login.html';
+            }
+            checkAuth();
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await supabaseClient.auth.signOut();
+                window.location.href = 'login.html';
+            });
+
+            // ── Helper: get client code ──
+            function getClientCode(client) {
+                if (client.client_code && client.client_code.trim() !== '') {
+                    return client.client_code;
+                }
+                return 'CL-' + String(client.id).padStart(4, '0');
+            }
+
+            // ── Ticket + verification code generation (5‑min expiry, Unix timestamp) ──
+            function generateTicket() {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let ticket = '';
+                for (let i = 0; i < 16; i++) {
+                    ticket += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return ticket;
+            }
+
+            function generateVerificationCode() {
+                return String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+            }
+
+            async function createTicketForClient(clientId) {
+                let ticket = generateTicket();
+                let attempts = 0;
+                let unique = false;
+                while (!unique && attempts < 10) {
+                    const { data: existing } = await supabaseClient
+                        .from('clients')
+                        .select('id')
+                        .eq('ticket', ticket)
+                        .maybeSingle();
+                    if (!existing) unique = true;
+                    else {
+                        ticket = generateTicket();
+                        attempts++;
+                    }
+                }
+                if (!unique) throw new Error('Could not generate unique ticket');
+                const verificationCode = generateVerificationCode();
+                const expirySeconds = Math.floor(Date.now() / 1000) + 300; // 5 minutes from now
+                const { error } = await supabaseClient
+                    .from('clients')
+                    .update({
+                        ticket: ticket,
+                        verification_code: verificationCode,
+                        ticket_used: false,
+                        ticket_expires_at: expirySeconds
+                    })
+                    .eq('id', clientId);
+                if (error) throw error;
+                return { ticket, verificationCode };
+            }
+
+            // ── DOM refs ──
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            const searchInput = document.getElementById('searchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const selectAll = document.getElementById('selectAll');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const sendRemindersBtn = document.getElementById('sendRemindersBtn');
+            const sendInvoiceBtn = document.getElementById('sendInvoiceBtn');
+            const customInvoiceBtn = document.getElementById('customInvoiceBtn');
+            const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+            const totalCount = document.getElementById('totalCount');
+            const activeCount = document.getElementById('activeCount');
+            const blockedCount = document.getElementById('blockedCount');
+            const overdueCount = document.getElementById('overdueCount');
+            const receivedMonth = document.getElementById('receivedMonth');
+            const monthlyRevenue = document.getElementById('monthlyRevenue');
+
+            const toast = document.getElementById('toast');
+            let toastTimeout = null;
+
+            // ── State ──
+            let clients = [];
+            let payments = [];
+            let selectedForInvoice = new Set();
+
+            // ── Helpers ──
+            function esc(str) {
+                if (!str) return '';
+                return String(str).replace(/[&<>"]/g, m => {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    if (m === '"') return '&quot;';
+                    return m;
+                });
+            }
+
+            function formatCurrency(val) {
+                return '$' + Number(val).toFixed(2);
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return '—';
+                const d = new Date(dateStr + 'T00:00:00');
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            function showToast(msg, icon = 'fa-check-circle') {
+                toast.innerHTML = `<i class="fas ${icon}"></i> ${msg}`;
+                toast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => toast.classList.remove('show'), 3200);
+            }
+
+            function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+            function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+            // ── PDF Generator ──
+            async function generateInvoicePDF(client, dueDate) {
+                const hostingFee = client.hosting_fee || 0;
+                const backupFee = client.backup_fee || 0;
+                const totalFee = client.monthly_fee || 0;
+                let baseServiceFee = Math.max(0, totalFee - hostingFee - backupFee);
+                if (totalFee === 0 && baseServiceFee === 0 && hostingFee === 0 && backupFee === 0) {
+                    baseServiceFee = totalFee;
+                }
+
+                const serviceName = client.service_name || 'Web App Service';
+                const serviceDesc = client.service_description || 'Monthly subscription & maintenance';
+                const paymentLink = client.payment_link || 'https://mathonzi04.github.io/Web/homev5.html';
+                const due = dueDate || client.next_invoice_date || new Date().toISOString().split('T')[0];
+                const today = new Date().toISOString().split('T')[0];
+                const clientCode = getClientCode(client);
+                const invoiceNumber = 'INV-' + clientCode + '-' + today.replace(/-/g, '');
+
+                let itemsHtml = '';
+                if (baseServiceFee > 0) {
+                    itemsHtml += `
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${esc(serviceName)}</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: center;">Monthly</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(baseServiceFee)}</td>
+                            </tr>
+                        `;
+                }
+                if (hostingFee > 0) {
+                    itemsHtml += `
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Monthly Hosting</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: center;">Monthly</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(hostingFee)}</td>
+                            </tr>
+                        `;
+                }
+                if (backupFee > 0) {
+                    itemsHtml += `
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Monthly Backups</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: center;">Monthly</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(backupFee)}</td>
+                            </tr>
+                        `;
+                }
+                if (!itemsHtml) {
+                    itemsHtml = `
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${esc(serviceName)}</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: center;">Monthly</td>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(totalFee)}</td>
+                            </tr>
+                        `;
+                }
+
+                const html = `
+                        <html>
+                        <head>
+                            <style>
+                                * { margin: 0; padding: 0; box-sizing: border-box; }
+                                body {
+                                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                                    background: #ffffff;
+                                    padding: 2rem;
+                                    color: #1e293b;
+                                    max-width: 720px;
+                                    margin: 0 auto;
+                                }
+                                .invoice-container {
+                                    background: white;
+                                    border-radius: 24px;
+                                    padding: 2rem;
+                                    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                                    border: 1px solid #f1f5f9;
+                                }
+                                .header {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: flex-start;
+                                    border-bottom: 3px solid #e67e22;
+                                    padding-bottom: 1.2rem;
+                                    margin-bottom: 1.5rem;
+                                }
+                                .brand h1 {
+                                    font-size: 1.8rem;
+                                    font-weight: 700;
+                                    color: #0b1a2b;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.5rem;
+                                }
+                                .brand h1 i { color: #e67e22; }
+                                .brand .tagline { color: #64748b; font-size: 0.85rem; margin-top: 0.2rem; }
+                                .invoice-meta { text-align: right; }
+                                .invoice-meta .title {
+                                    font-size: 1.4rem;
+                                    font-weight: 700;
+                                    color: #e67e22;
+                                    letter-spacing: 1px;
+                                }
+                                .invoice-meta .meta-row { color: #475569; font-size: 0.9rem; margin-top: 0.2rem; }
+
+                                .client-section {
+                                    background: #f8fafc;
+                                    border-radius: 16px;
+                                    padding: 1rem 1.2rem;
+                                    margin-bottom: 1.5rem;
+                                    border: 1px solid #e2e8f0;
+                                }
+                                .client-section .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 600; }
+                                .client-section .name { font-weight: 700; font-size: 1.1rem; margin-top: 0.2rem; }
+                                .client-section .code { font-family: monospace; font-weight: 600; color: #e67e22; background: #fef9f0; padding: 0.1rem 0.6rem; border-radius: 40px; display: inline-block; margin-top: 0.2rem; font-size: 0.8rem; }
+                                .client-section .email { color: #475569; font-size: 0.9rem; margin-top: 0.2rem; }
+                                .client-section .site { margin-top: 0.2rem; }
+                                .client-section .site a { color: #e67e22; text-decoration: none; font-weight: 500; }
+
+                                .items-table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; }
+                                .items-table th {
+                                    text-align: left;
+                                    padding: 10px 0 6px 0;
+                                    border-bottom: 2px solid #e2e8f0;
+                                    font-weight: 600;
+                                    color: #475569;
+                                    font-size: 0.8rem;
+                                    text-transform: uppercase;
+                                    letter-spacing: 0.3px;
+                                }
+                                .items-table th:last-child { text-align: right; }
+                                .items-table td:last-child { text-align: right; }
+                                .items-table .total-row td {
+                                    padding-top: 12px;
+                                    border-top: 2px solid #e67e22;
+                                    font-weight: 700;
+                                    font-size: 1.1rem;
+                                }
+                                .items-table .total-row .total-label { color: #0b1a2b; }
+                                .items-table .total-row .total-amount { color: #e67e22; }
+
+                                .payment-box {
+                                    background: #fef9f0;
+                                    border: 1px solid #fde68a;
+                                    border-radius: 16px;
+                                    padding: 1rem 1.2rem;
+                                    margin: 1.5rem 0 0.5rem 0;
+                                }
+                                .payment-box .label { font-weight: 600; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+                                .payment-box .link { word-break: break-all; }
+                                .payment-box .link a { color: #e67e22; font-weight: 500; text-decoration: none; }
+                                .payment-box .link a:hover { text-decoration: underline; }
+
+                                .footer {
+                                    margin-top: 2rem;
+                                    padding-top: 1rem;
+                                    border-top: 1px solid #e2e8f0;
+                                    text-align: center;
+                                    font-size: 0.8rem;
+                                    color: #94a3b8;
+                                }
+                                .footer .thanks { color: #475569; font-weight: 500; margin-bottom: 0.2rem; }
+                                .service-desc { color: #475569; font-size: 0.9rem; margin: 0.5rem 0 0.2rem 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="invoice-container">
+                                <div class="header">
+                                    <div class="brand">
+                                        <h1><i class="fas fa-crown"></i> A+Connect</h1>
+                                        <div class="tagline">Premium Web Solutions</div>
+                                    </div>
+                                    <div class="invoice-meta">
+                                        <div class="title">INVOICE</div>
+                                        <div class="meta-row">#${invoiceNumber}</div>
+                                        <div class="meta-row">Date: ${today}</div>
+                                        <div class="meta-row">Due: ${formatDate(due)}</div>
+                                    </div>
+                                </div>
+
+                                <div class="client-section">
+                                    <div class="label">Bill To</div>
+                                    <div class="name">${esc(client.name)}</div>
+                                    <div class="code"><i class="fas fa-id-card" style="margin-right:0.3rem;"></i>${clientCode}</div>
+                                    <div class="email">${esc(client.email)}</div>
+                                    <div class="site">🔗 <a href="${esc(client.site_url || '#')}" target="_blank">${esc(client.site_url ? client.site_url.replace(/^https?:\/\//, '') : '—')}</a></div>
+                                    ${serviceDesc ? `<div class="service-desc">${esc(serviceDesc)}</div>` : ''}
+                                </div>
+
+                                <table class="items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th style="text-align:center;">Period</th>
+                                            <th>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${itemsHtml}
+                                        <tr class="total-row">
+                                            <td colspan="2" class="total-label">Total Due</td>
+                                            <td class="total-amount">${formatCurrency(totalFee)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="payment-box">
+                                    <div class="label"><i class="fas fa-credit-card"></i> Settle Payment</div>
+                                    <div class="link"><a href="${esc(paymentLink)}" target="_blank">${esc(paymentLink)}</a></div>
+                                    <div style="font-size:0.8rem; color:#64748b; margin-top:0.4rem;">Please reference your Client ID: <strong>${clientCode}</strong> when paying.</div>
+                                </div>
+
+                                <div class="footer">
+                                    <div class="thanks">Thank you for your business!</div>
+                                    <div>A+Connect · This is a system-generated invoice.</div>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+
+                const container = document.createElement('div');
+                container.innerHTML = html;
+                container.style.position = 'fixed';
+                container.style.left = '-9999px';
+                container.style.top = '0';
+                container.style.width = '760px';
+                container.style.background = 'white';
+                container.style.padding = '0';
+                container.style.zIndex = '-1';
+                document.body.appendChild(container);
+
+                try {
+                    const canvas = await html2canvas(container, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width: 760,
+                    });
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = 210;
+                    const pdfHeight = (canvas.height / canvas.width) * pdfWidth;
+                    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    const pdfBase64 = doc.output('datauristring').split(',')[1];
+                    return pdfBase64;
+                } catch (err) {
+                    console.error('PDF generation error:', err);
+                    showToast('Failed to generate PDF: ' + err.message, 'fa-exclamation-circle');
+                    return null;
+                } finally {
+                    document.body.removeChild(container);
+                }
+            }
+
+            // ── Fetch data ──
+            async function loadData() {
+                tbody.innerHTML =
+                    `<tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>`;
+                emptyState.style.display = 'none';
+
+                const [clientsRes, paymentsRes] = await Promise.all([
+                    supabaseClient.from('clients').select('*').order('id', { ascending: true }),
+                    supabaseClient.from('payments').select('*').order('paid_at', { ascending: false })
+                ]);
+
+                if (clientsRes.error) {
+                    console.error('Clients error', clientsRes.error);
+                    tbody.innerHTML =
+                        `<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-triangle"></i> Failed to load clients.</td></tr>`;
+                    return;
+                }
+                if (paymentsRes.error) {
+                    console.error('Payments error', paymentsRes.error);
+                }
+
+                clients = (clientsRes.data || []).map(c => {
+                    if (c.hosting_fee === undefined || c.hosting_fee === null) c.hosting_fee = 0;
+                    if (c.backup_fee === undefined || c.backup_fee === null) c.backup_fee = 0;
+                    return c;
+                });
+                payments = paymentsRes.data || [];
+
+                await autoBlockOverdue();
+                processTimers();
+                renderStats();
+                renderTable();
+                populateCustomInvoiceDropdown();
+            }
+
+            // ── Auto‑block ──
+            async function autoBlockOverdue() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const updates = [];
+
+                for (const c of clients) {
+                    if (c.status !== 'active') continue;
+                    if (!c.next_invoice_date) continue;
+                    const due = new Date(c.next_invoice_date + 'T00:00:00');
+                    const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+                    if (diffDays < -3) {
+                        updates.push(c.id);
+                    }
+                }
+
+                if (updates.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('clients')
+                        .update({ status: 'inactive' })
+                        .in('id', updates);
+                    if (error) console.error('Auto-block error', error);
+                    const { data } = await supabaseClient.from('clients').select('*');
+                    if (data) clients = data.map(c => {
+                        if (c.hosting_fee === undefined || c.hosting_fee === null) c.hosting_fee = 0;
+                        if (c.backup_fee === undefined || c.backup_fee === null) c.backup_fee = 0;
+                        return c;
+                    });
+                }
+            }
+
+            // ── Timer processing ──
+            function processTimers() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                clients.forEach(c => {
+                    if (c.status === 'inactive') {
+                        c._timerState = 'inactive';
+                        c._timerLabel = ' Blocked';
+                        return;
+                    }
+
+                    if (!c.next_invoice_date) {
+                        c._timerState = 'unknown';
+                        c._timerLabel = ' No due date';
+                        return;
+                    }
+
+                    const due = new Date(c.next_invoice_date + 'T00:00:00');
+                    const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+
+                    if (diffDays < -3) {
+                        c._timerState = 'blocked';
+                        c._timerLabel = ' Overdue (blocked)';
+                        c.status = 'inactive';
+                    } else if (diffDays < 0) {
+                        c._timerState = 'overdue';
+                        c._timerLabel = `️ Overdue (${Math.abs(diffDays)}d)`;
+                    } else if (diffDays <= 3) {
+                        c._timerState = 'invoice-sent';
+                        c._timerLabel = ` Due in ${diffDays}d`;
+                    } else {
+                        c._timerState = 'safe';
+                        c._timerLabel = ` Due in ${diffDays}d`;
+                    }
+                });
+            }
+
+            // ── Stats ──
+            function renderStats() {
+                const total = clients.length;
+                const active = clients.filter(c => c.status === 'active').length;
+                const blocked = clients.filter(c => c.status === 'inactive').length;
+                const overdue = clients.filter(c => c.status === 'active' && c._timerState === 'overdue').length;
+                const revenue = clients
+                    .filter(c => c.status === 'active')
+                    .reduce((sum, c) => sum + (c.monthly_fee || 0), 0);
+
+                const now = new Date();
+                const month = now.getMonth();
+                const year = now.getFullYear();
+                const received = payments
+                    .filter(p => {
+                        const d = new Date(p.paid_at + 'T00:00:00');
+                        return d.getMonth() === month && d.getFullYear() === year;
+                    })
+                    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+                totalCount.textContent = total;
+                activeCount.textContent = active;
+                blockedCount.textContent = blocked;
+                overdueCount.textContent = overdue;
+                receivedMonth.textContent = formatCurrency(received);
+                monthlyRevenue.textContent = formatCurrency(revenue);
+            }
+
+            // ── Table ──
+            function renderTable() {
+                const query = searchInput.value.toLowerCase().trim();
+                const filter = statusFilter.value;
+
+                let filtered = clients.filter(c => {
+                    const code = getClientCode(c).toLowerCase();
+                    const matchName = c.name.toLowerCase().includes(query) ||
+                        c.email.toLowerCase().includes(query) ||
+                        code.includes(query);
+                    let matchStatus = true;
+                    if (filter === 'active') matchStatus = c.status === 'active';
+                    else if (filter === 'inactive') matchStatus = c.status === 'inactive';
+                    else if (filter === 'overdue') matchStatus = c.status === 'active' && c._timerState === 'overdue';
+                    return matchName && matchStatus;
+                });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                emptyState.style.display = 'none';
+
+                let html = '';
+                filtered.forEach(c => {
+                    const code = getClientCode(c);
+                    const totalPaid = payments
+                        .filter(p => p.client_id === c.id)
+                        .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+                    const statusBadge = c.status === 'active' ?
+                        '<span class="badge badge-active">Active</span>' :
+                        '<span class="badge badge-inactive">Blocked</span>';
+
+                    let timerHtml = '';
+                    if (c.status === 'inactive') {
+                        timerHtml = `<span class="blocked">${c._timerLabel}</span>`;
+                    } else {
+                        const cls = c._timerState === 'safe' ? 'safe' :
+                            c._timerState === 'invoice-sent' ? 'invoice-sent' :
+                            c._timerState === 'overdue' ? 'overdue' : '';
+                        timerHtml = `<span class="${cls}">${c._timerLabel}</span>`;
+                    }
+
+                    const checked = selectedForInvoice.has(c.id) ? 'checked' : '';
+
+                    html += `
+                            <tr>
+                                <td><input type="checkbox" class="row-checkbox" data-id="${c.id}" ${checked} /></td>
+                                <td><span class="client-code">${code}</span></td>
+                                <td>
+                                    <div class="subscriber-name">${esc(c.name)}</div>
+                                    <div class="subscriber-email">${esc(c.email)}</div>
+                                </td>
+                                <td>${statusBadge}</td>
+                                <td>${formatCurrency(c.monthly_fee || 0)}</td>
+                                <td><strong>${formatCurrency(totalPaid)}</strong> <span style="color:#64748b;font-size:0.8rem;">(${payments.filter(p => p.client_id === c.id).length} payments)</span></td>
+                                <td class="timer-cell">${timerHtml}</td>
+                                <td style="text-align:right;">
+                                    <div class="actions-cell">
+                                        <button class="btn-edit" data-id="${c.id}" title="Edit payment"><i class="fas fa-pen"></i></button>
+                                        <button class="btn-history" data-id="${c.id}" title="View history"><i class="fas fa-clock-rotate-left"></i></button>
+                                        <button class="btn-suspend" data-id="${c.id}" title="Toggle suspend"><i class="fas fa-pause"></i></button>
+                                        <button class="btn-pdf" data-id="${c.id}" title="Download PDF invoice"><i class="fas fa-file-pdf"></i></button>
+                                        <button class="btn-delete" data-id="${c.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                });
+                tbody.innerHTML = html;
+                updateSelectAllState();
+                attachRowEvents();
+            }
+
+            // ── Row events ──
+            function attachRowEvents() {
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        const id = parseInt(this.dataset.id);
+                        if (this.checked) selectedForInvoice.add(id);
+                        else selectedForInvoice.delete(id);
+                        updateSelectAllState();
+                    });
+                });
+
+                document.querySelectorAll('.btn-edit').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.dataset.id);
+                        const c = clients.find(cl => cl.id === id);
+                        if (c) openEditModal(c);
+                    });
+                });
+
+                document.querySelectorAll('.btn-history').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.dataset.id);
+                        const c = clients.find(cl => cl.id === id);
+                        if (c) openHistoryModal(c);
+                    });
+                });
+
+                document.querySelectorAll('.btn-suspend').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.dataset.id);
+                        toggleSuspend(id);
+                    });
+                });
+
+                document.querySelectorAll('.btn-delete').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = parseInt(this.dataset.id);
+                        deleteClient(id);
+                    });
+                });
+
+                document.querySelectorAll('.btn-pdf').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const id = parseInt(this.dataset.id);
+                        const c = clients.find(cl => cl.id === id);
+                        if (c) {
+                            showToast('Generating PDF...', 'fa-spinner fa-spin');
+                            const pdfBase64 = await generateInvoicePDF(c, c.next_invoice_date);
+                            if (pdfBase64) {
+                                const link = document.createElement('a');
+                                link.href = 'data:application/pdf;base64,' + pdfBase64;
+                                link.download =
+                                    `Invoice_${c.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                                link.click();
+                                showToast('PDF downloaded!', 'fa-file-pdf');
+                            }
+                        }
+                    });
+                });
+            }
+
+            // ── Select All ──
+            function updateSelectAllState() {
+                const checkboxes = document.querySelectorAll('.row-checkbox');
+                const checked = document.querySelectorAll('.row-checkbox:checked');
+                selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+            }
+
+            selectAll.addEventListener('change', function() {
+                const checked = this.checked;
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    const id = parseInt(cb.dataset.id);
+                    cb.checked = checked;
+                    if (checked) selectedForInvoice.add(id);
+                    else selectedForInvoice.delete(id);
+                });
+            });
+
+            // ── Edit Modal ──
+            function openEditModal(client) {
+                document.getElementById('editClientId').value = client.id;
+                document.getElementById('editClientName').value = client.name;
+                document.getElementById('editClientCode').value = getClientCode(client);
+                document.getElementById('editFee').value = client.monthly_fee || 0;
+                document.getElementById('editDueDate').value = client.next_invoice_date || '';
+                openModal('editModal');
+            }
+
+            document.getElementById('editForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const id = parseInt(document.getElementById('editClientId').value);
+                const fee = parseFloat(document.getElementById('editFee').value);
+                const dueDate = document.getElementById('editDueDate').value;
+
+                if (isNaN(fee) || fee < 0) { showToast('Invalid fee.', 'fa-exclamation-circle'); return; }
+                if (!dueDate) { showToast('Please select a due date.', 'fa-exclamation-circle'); return; }
+
+                const { error } = await supabaseClient
+                    .from('clients')
+                    .update({ monthly_fee: fee, next_invoice_date: dueDate })
+                    .eq('id', id);
+                if (error) {
+                    console.error(error);
+                    showToast('Failed to update.', 'fa-exclamation-circle');
+                } else {
+                    closeModal('editModal');
+                    showToast('Payment details updated.', 'fa-save');
+                    loadData();
+                }
+            });
+
+            // ── Toggle suspend ──
+            async function toggleSuspend(id) {
+                const c = clients.find(cl => cl.id === id);
+                if (!c) return;
+                const newStatus = c.status === 'active' ? 'inactive' : 'active';
+                const { error } = await supabaseClient
+                    .from('clients')
+                    .update({ status: newStatus })
+                    .eq('id', id);
+                if (error) {
+                    console.error(error);
+                    showToast('Failed to toggle status.', 'fa-exclamation-circle');
+                } else {
+                    showToast(`Service ${newStatus === 'active' ? 'activated' : 'blocked'} for ${c.name}.`, 'fa-exchange');
+                    loadData();
+                }
+            }
+
+            // ── Delete client ──
+            async function deleteClient(id) {
+                const c = clients.find(cl => cl.id === id);
+                if (!c) return;
+                if (!confirm(`Delete "${c.name}" permanently?`)) return;
+                const { error } = await supabaseClient
+                    .from('clients')
+                    .delete()
+                    .eq('id', id);
+                if (error) {
+                    console.error(error);
+                    showToast('Failed to delete.', 'fa-exclamation-circle');
+                } else {
+                    showToast(`Deleted ${c.name}.`, 'fa-trash');
+                    loadData();
+                }
+            }
+
+            // ── Send Invoices (bulk) with fresh ticket+verification code ──
+            sendInvoiceBtn.addEventListener('click', () => {
+                const container = document.getElementById('invoiceClientList');
+                if (clients.length === 0) {
+                    container.innerHTML = '<p style="padding:1rem; color:#94a3b8;">No clients.</p>';
+                    openModal('invoiceModal');
+                    return;
+                }
+                let html = '';
+                clients.forEach(c => {
+                    const code = getClientCode(c);
+                    const checked = selectedForInvoice.has(c.id) ? 'checked' : '';
+                    html += `
+                            <label style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 1rem;border-bottom:1px solid #f1f5f9;cursor:pointer;">
+                                <input type="checkbox" class="invoice-checkbox" data-id="${c.id}" ${checked} />
+                                <span><span class="client-code" style="font-size:0.7rem;background:#e2e8f0;">${code}</span> <strong>${esc(c.name)}</strong> <span style="color:#64748b;">(${esc(c.email)})</span> — ${formatCurrency(c.monthly_fee||0)}/mo</span>
+                            </label>
+                        `;
+                });
+                container.innerHTML = html;
+                container.querySelectorAll('.invoice-checkbox').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        const id = parseInt(this.dataset.id);
+                        if (this.checked) selectedForInvoice.add(id);
+                        else selectedForInvoice.delete(id);
+                    });
+                });
+                document.getElementById('invoicePaymentDate').value = '';
+                document.getElementById('invoiceAttachPdf').checked = true;
+                openModal('invoiceModal');
+            });
+
+            document.getElementById('confirmSendInvoice').addEventListener('click', async function() {
+                const checkboxes = document.querySelectorAll('#invoiceClientList .invoice-checkbox:checked');
+                if (checkboxes.length === 0) {
+                    showToast('Select at least one client.', 'fa-exclamation-circle');
+                    return;
+                }
+                const ids = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+                const selected = clients.filter(c => ids.includes(c.id));
+                const paymentDate = document.getElementById('invoicePaymentDate').value;
+                const attachPdf = document.getElementById('invoiceAttachPdf').checked;
+
+                const sendBtn = this;
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+                let successCount = 0;
+                let failCount = 0;
+
+                for (const c of selected) {
+                    try {
+                        // ALWAYS generate a fresh ticket + verification code
+                        const { ticket, verificationCode } = await createTicketForClient(c.id);
+
+                        const baseUrl = 'https://mathonzi04.github.io/Web/settle-payments.html';
+                        const paymentLinkWithTicket = `${baseUrl}?ticket=${ticket}`;
+
+                        let pdfBase64 = null;
+                        if (attachPdf) {
+                            pdfBase64 = await generateInvoicePDF(c, c.next_invoice_date);
+                            if (!pdfBase64) {
+                                console.warn(`PDF generation failed for ${c.name}, sending without attachment.`);
+                            }
+                        }
+
+                        const serviceName = c.service_name || 'Web App Service';
+                        const clientCode = getClientCode(c);
+                        const body =
+                            `Dear ${c.name},\n\nYour monthly service fee of ${formatCurrency(c.monthly_fee||0)} is due on ${formatDate(c.next_invoice_date)}.\n\nClient ID: ${clientCode}\nService: ${serviceName}\nWebsite: ${c.site_url || '—'}\n\n🔗 Click here to settle your payment securely:\n${paymentLinkWithTicket}\n\nTo complete the payment, you will need the following verification code:\n**${verificationCode}**\n\n(Keep this code safe – it will be required on the payment page. This link and code expire in 5 minutes.)\n\nPlease reference your Client ID (${clientCode}) when paying.\n\nThank you,\nA+Connect`;
+
+                        const payload = {
+                            recipients: [c.email],
+                            subject: 'Monthly Subscription Invoice (Payment Link)',
+                            body: body
+                        };
+
+                        if (pdfBase64) {
+                            payload.attachment = {
+                                name: `Invoice_${c.name.replace(/\s+/g, '_')}.pdf`,
+                                content: pdfBase64,
+                                contentType: 'application/pdf'
+                            };
+                        }
+
+                        const response = await fetch('https://sdrwdvvrojhhxnyydsao.supabase.co/functions/v1/Send-emails-', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await response.json();
+                        if (!response.ok || !data.success) {
+                            console.error(`Failed to send to ${c.email}:`, data);
+                            failCount++;
+                        } else {
+                            successCount++;
+                        }
+                    } catch (err) {
+                        console.error(`Error sending to ${c.email}:`, err);
+                        failCount++;
+                    }
+
+                    if (paymentDate) {
+                        try {
+                            const { error: payErr } = await supabaseClient
+                                .from('payments')
+                                .insert({
+                                    client_id: c.id,
+                                    amount: c.monthly_fee || 0,
+                                    paid_at: paymentDate,
+                                    method: 'invoice'
+                                });
+                            if (payErr) console.error('Payment insert error', payErr);
+
+                            const newDue = new Date(paymentDate + 'T00:00:00');
+                            newDue.setMonth(newDue.getMonth() + 1);
+                            const newDueStr = newDue.toISOString().split('T')[0];
+                            await supabaseClient
+                                .from('clients')
+                                .update({ next_invoice_date: newDueStr })
+                                .eq('id', c.id);
+                        } catch (err) {
+                            console.error('Payment recording error:', err);
+                        }
+                    }
+                }
+
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                closeModal('invoiceModal');
+                if (failCount === 0) {
+                    showToast(`Invoices sent successfully to ${successCount} client(s).`, 'fa-check');
+                } else {
+                    showToast(`Sent: ${successCount}, failed: ${failCount}. Check console.`, 'fa-exclamation-circle');
+                }
+                loadData();
+            });
+
+            // ── Send Reminders with fresh ticket+verification code ──
+            sendRemindersBtn.addEventListener('click', async function() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const reminderCandidates = clients.filter(c => {
+                    if (c.status !== 'active') return false;
+                    if (!c.next_invoice_date) return false;
+                    const due = new Date(c.next_invoice_date + 'T00:00:00');
+                    const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+                    return diffDays <= 3 && diffDays >= -3;
+                });
+
+                if (reminderCandidates.length === 0) {
+                    showToast('No clients need reminders at this time.', 'fa-bell');
+                    return;
+                }
+
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+                let successCount = 0;
+                let failCount = 0;
+
+                for (const c of reminderCandidates) {
+                    try {
+                        // ALWAYS generate a fresh ticket + verification code
+                        const { ticket, verificationCode } = await createTicketForClient(c.id);
+
+                        const baseUrl = 'https://mathonzi04.github.io/Web/settle-payments.html';
+                        const paymentLinkWithTicket = `${baseUrl}?ticket=${ticket}`;
+                        const due = formatDate(c.next_invoice_date);
+                        const serviceName = c.service_name || 'Web App Service';
+                        const clientCode = getClientCode(c);
+                        const body =
+                            `Dear ${c.name},\n\nThis is a reminder that your monthly service fee of ${formatCurrency(c.monthly_fee||0)} is due on ${due}.\n\nClient ID: ${clientCode}\nService: ${serviceName}\n\n🔗 Settle your payment here:\n${paymentLinkWithTicket}\n\nVerification code: **${verificationCode}**\n\n(This link and code expire in 5 minutes.)\n\nPlease reference your Client ID (${clientCode}) when paying.\n\nThank you,\nA+Connect`;
+
+                        const payload = {
+                            recipients: [c.email],
+                            subject: 'Payment Reminder – A+Connect',
+                            body: body
+                        };
+
+                        const response = await fetch('https://sdrwdvvrojhhxnyydsao.supabase.co/functions/v1/Send-emails-', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await response.json();
+                        if (!response.ok || !data.success) {
+                            console.error(`Reminder failed for ${c.email}:`, data);
+                            failCount++;
+                        } else {
+                            successCount++;
+                        }
+                    } catch (err) {
+                        console.error(`Reminder error for ${c.email}:`, err);
+                        failCount++;
+                    }
+                }
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-bell"></i> Send Reminders';
+                if (failCount === 0) {
+                    showToast(`Reminders sent to ${successCount} client(s).`, 'fa-bell');
+                } else {
+                    showToast(`Sent: ${successCount}, failed: ${failCount}.`, 'fa-exclamation-circle');
+                }
+            });
+
+            // ── Custom Invoice with fresh ticket+verification code ──
+            function populateCustomInvoiceDropdown() {
+                const select = document.getElementById('customInvoiceClient');
+                select.innerHTML = '<option value="">— Select a client —</option>';
+                clients.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${getClientCode(c)} — ${c.name} (${c.email})`;
+                    select.appendChild(opt);
+                });
+            }
+
+            customInvoiceBtn.addEventListener('click', () => {
+                populateCustomInvoiceDropdown();
+                document.getElementById('customInvoiceEmail').value = '';
+                document.getElementById('customInvoiceSubject').value = 'Invoice for services';
+                document.getElementById('customInvoiceBody').value =
+                    'Dear [Client],\n\nPlease find attached your invoice for our services.\n\nThank you,\nA+Connect';
+                document.getElementById('customInvoiceAttachPdf').checked = true;
+                openModal('customInvoiceModal');
+            });
+
+            document.getElementById('customInvoiceClient').addEventListener('change', function() {
+                const id = parseInt(this.value);
+                const client = clients.find(c => c.id === id);
+                if (client) {
+                    document.getElementById('customInvoiceEmail').value = client.email;
+                    const bodyField = document.getElementById('customInvoiceBody');
+                    const currentBody = bodyField.value;
+                    if (currentBody.includes('[Client]')) {
+                        bodyField.value = currentBody.replace('[Client]', client.name);
+                    }
+                } else {
+                    document.getElementById('customInvoiceEmail').value = '';
+                }
+            });
+
+            document.getElementById('customInvoiceForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('customInvoiceEmail').value.trim();
+                const subject = document.getElementById('customInvoiceSubject').value.trim();
+                const body = document.getElementById('customInvoiceBody').value.trim();
+                const attachPdf = document.getElementById('customInvoiceAttachPdf').checked;
+
+                if (!email || !subject || !body) {
+                    showToast('Please fill all fields.', 'fa-exclamation-circle');
+                    return;
+                }
+
+                const clientSelect = document.getElementById('customInvoiceClient');
+                const clientId = parseInt(clientSelect.value);
+                const client = clients.find(c => c.id === clientId);
+
+                let pdfBase64 = null;
+                if (attachPdf && client) {
+                    showToast('Generating PDF...', 'fa-spinner fa-spin');
+                    pdfBase64 = await generateInvoicePDF(client, client.next_invoice_date);
+                    if (!pdfBase64) {
+                        showToast('PDF generation failed. Sending without attachment.', 'fa-exclamation-circle');
+                    }
+                }
+
+                let finalBody = body;
+                if (client) {
+                    try {
+                        // ALWAYS generate a fresh ticket + verification code
+                        const { ticket, verificationCode } = await createTicketForClient(client.id);
+                        const baseUrl = 'https://mathonzi04.github.io/Web/settle-payments.html';
+                        const link = `${baseUrl}?ticket=${ticket}`;
+                        finalBody +=
+                            `\n\n🔗 Settle Payment: ${link}\nVerification code: **${verificationCode}**\n\n(This link and code expire in 5 minutes.)`;
+                    } catch (err) {
+                        console.error('Ticket generation error:', err);
+                    }
+                }
+
+                const payload = {
+                    recipients: [email],
+                    subject: subject,
+                    body: finalBody
+                };
+                if (pdfBase64) {
+                    payload.attachment = {
+                        name: `Invoice_${client ? client.name.replace(/\s+/g, '_') : 'custom'}_${new Date().toISOString().split('T')[0]}.pdf`,
+                        content: pdfBase64,
+                        contentType: 'application/pdf'
+                    };
+                }
+
+                try {
+                    const response = await fetch('https://sdrwdvvrojhhxnyydsao.supabase.co/functions/v1/Send-emails-', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        showToast(`Failed: ${data.error || 'Unknown'}`, 'fa-exclamation-circle');
+                    } else {
+                        closeModal('customInvoiceModal');
+                        showToast('Custom invoice sent!', 'fa-file-invoice');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('Network error sending invoice.', 'fa-exclamation-circle');
+                }
+            });
+
+            // ── History Modal ──
+            let historyClient = null;
+
+            function openHistoryModal(client) {
+                historyClient = client;
+                const code = getClientCode(client);
+                document.getElementById('historyClientName').textContent = client.name;
+                document.getElementById('historyClientCode').textContent = 'Client ID: ' + code;
+                document.getElementById('historyClientCodeBadge').textContent = code;
+                document.getElementById('historyFee').textContent = (client.monthly_fee || 0).toFixed(2);
+                document.getElementById('historyStatus').innerHTML = client.status === 'active' ?
+                    '<span class="badge badge-active">Active</span>' :
+                    '<span class="badge badge-inactive">Blocked</span>';
+
+                const totalPaid = payments
+                    .filter(p => p.client_id === client.id)
+                    .reduce((sum, p) => sum + (p.amount || 0), 0);
+                document.getElementById('historyTotalPaid').textContent = totalPaid.toFixed(2);
+
+                const list = document.getElementById('historyList');
+                const clientPayments = payments.filter(p => p.client_id === client.id).sort((a, b) => new Date(b.paid_at) -
+                    new Date(a.paid_at));
+                if (clientPayments.length === 0) {
+                    list.innerHTML = '<p style="color:#94a3b8;">No payments recorded.</p>';
+                } else {
+                    let html = '<ul style="list-style:none;padding:0;">';
+                    clientPayments.forEach(p => {
+                        html +=
+                            `<li style="padding:0.4rem 0;border-bottom:1px solid #f1f5f9;">📄 ${formatDate(p.paid_at)} — ${formatCurrency(p.amount)} ${p.method ? '('+p.method+')' : ''}</li>`;
+                    });
+                    html += '</ul>';
+                    list.innerHTML = html;
+                }
+                openModal('historyModal');
+            }
+
+            document.getElementById('recordPaymentBtn').addEventListener('click', async function() {
+                if (!historyClient) return;
+                const amount = historyClient.monthly_fee || 0;
+                if (!confirm(`Record payment of ${formatCurrency(amount)} for ${historyClient.name} and extend due date by 1 month?`))
+                    return;
+
+                const today = new Date().toISOString().split('T')[0];
+                const { error: payErr } = await supabaseClient
+                    .from('payments')
+                    .insert({
+                        client_id: historyClient.id,
+                        amount: amount,
+                        paid_at: today,
+                        method: 'manual'
+                    });
+                if (payErr) {
+                    console.error(payErr);
+                    showToast('Failed to record payment.', 'fa-exclamation-circle');
+                    return;
+                }
+
+                const newDue = new Date();
+                newDue.setMonth(newDue.getMonth() + 1);
+                const newDueStr = newDue.toISOString().split('T')[0];
+                await supabaseClient
+                    .from('clients')
+                    .update({ next_invoice_date: newDueStr })
+                    .eq('id', historyClient.id);
+
+                closeModal('historyModal');
+                showToast(`Payment recorded for ${historyClient.name}.`, 'fa-check');
+                loadData();
+            });
+
+            document.getElementById('downloadPdfBtn').addEventListener('click', async function() {
+                if (!historyClient) return;
+                showToast('Generating PDF...', 'fa-spinner fa-spin');
+                const pdfBase64 = await generateInvoicePDF(historyClient, historyClient.next_invoice_date);
+                if (pdfBase64) {
+                    const link = document.createElement('a');
+                    link.href = 'data:application/pdf;base64,' + pdfBase64;
+                    link.download =
+                        `Invoice_${historyClient.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                    link.click();
+                    showToast('PDF downloaded!', 'fa-file-pdf');
+                }
+            });
+
+            // ── Refresh ──
+            refreshBtn.addEventListener('click', loadData);
+
+            // ── Search & Filter ──
+            searchInput.addEventListener('input', renderTable);
+            statusFilter.addEventListener('change', renderTable);
+            clearFiltersBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                statusFilter.value = 'all';
+                renderTable();
+            });
+
+            // ── Init ──
+            loadData();
+
+            // Close modals
+            document.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    closeModal(this.dataset.close);
+                });
+            });
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === this) closeModal(this.id);
+                });
+            });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+                }
+            });
+
+        })();
+    </script>
+</body>
+</html>

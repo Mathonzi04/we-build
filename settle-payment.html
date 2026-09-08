@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settle Payment | A+Connect</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #f0f4f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; }
+        .card { background: white; border-radius: 32px; padding: 2.5rem; max-width: 480px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.08); border: 1px solid #f1f5f9; }
+        .card h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem; }
+        .card h1 i { color: #e67e22; }
+        .subtitle { color: #64748b; margin-bottom: 1.8rem; font-size: 0.9rem; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { font-weight: 500; display: block; margin-bottom: 0.3rem; font-size: 0.9rem; }
+        .form-group input { width: 100%; padding: 0.7rem 1rem; border: 1px solid #e2e8f0; border-radius: 40px; font-size: 1rem; background: #f8fafc; transition: 0.2s; }
+        .form-group input:focus { outline: none; border-color: #e67e22; background: white; }
+        .btn { width: 100%; padding: 0.7rem; border: none; border-radius: 40px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-primary { background: #e67e22; color: white; }
+        .btn-primary:hover { background: #d35400; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; border: 1px solid #e2e8f0; color: #475569; }
+        .btn-outline:hover { background: #f8fafc; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        .info-box { background: #fef9f0; border: 1px solid #fde68a; border-radius: 20px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+        .info-box .label { font-size: 0.8rem; color: #92400e; text-transform: uppercase; letter-spacing: 0.3px; }
+        .info-box .value { font-size: 1.4rem; font-weight: 700; color: #0b1a2b; margin-top: 0.2rem; }
+        .info-box .sub { font-size: 0.9rem; color: #475569; margin-top: 0.2rem; }
+        .hidden { display: none; }
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #0b1a2b; color: white; padding: 0.8rem 1.8rem; border-radius: 40px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.2); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 2000; }
+        .toast.show { opacity: 1; }
+        .status-badge { display: inline-block; padding: 0.2rem 0.8rem; border-radius: 40px; font-size: 0.75rem; font-weight: 600; }
+        .status-valid { background: #dcfce7; color: #166534; }
+        .status-invalid { background: #fee2e2; color: #991b1b; }
+        .status-used { background: #fef3c7; color: #92400e; }
+        .mt-2 { margin-top: 1.2rem; }
+        .flex { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="card" id="app">
+        <h1><i class="fas fa-credit-card"></i> Settle Payment</h1>
+        <p class="subtitle">Enter your ticket code and the verification code from your email.</p>
+
+        <div class="form-group">
+            <label>Ticket Code</label>
+            <input type="text" id="ticketInput" placeholder="Auto‑filled from link" />
+        </div>
+        <div class="form-group">
+            <label>Verification Code</label>
+            <input type="text" id="codeInput" placeholder="6‑digit code from email" maxlength="6" inputmode="numeric" />
+        </div>
+
+        <button class="btn btn-primary" id="verifyBtn"><i class="fas fa-search"></i> Verify</button>
+
+        <div id="resultArea" class="hidden">
+            <div class="info-box" id="clientInfo">
+                <div class="label">Client</div>
+                <div class="value" id="clientName"></div>
+                <div class="sub" id="clientEmail"></div>
+                <div class="sub" id="clientCode"></div>
+                <div style="margin-top:0.8rem;">
+                    <span class="status-badge" id="statusBadge"></span>
+                </div>
+            </div>
+
+            <div class="info-box" style="border-color:#e67e22;">
+                <div class="label">Amount Due</div>
+                <div class="value" id="amountDue">$0.00</div>
+                <div class="sub" id="dueDate">Due: —</div>
+            </div>
+
+            <button class="btn btn-success" id="payBtn"><i class="fas fa-check-circle"></i> Confirm Payment</button>
+            <div style="margin-top:0.6rem; font-size:0.8rem; color:#64748b; text-align:center;">This will record the payment and extend your due date by one month.</div>
+        </div>
+
+        <div id="errorArea" class="hidden" style="margin-top:1.5rem; padding:1rem; border-radius:20px; background:#fee2e2; color:#991b1b; border:1px solid #fecaca;">
+            <i class="fas fa-exclamation-circle"></i> <span id="errorMessage"></span>
+        </div>
+
+        <div id="requestArea" class="hidden" style="margin-top:1.5rem;">
+            <button class="btn btn-warning" id="requestNewBtn"><i class="fas fa-sync-alt"></i> Request New Link & Code</button>
+            <div style="margin-top:0.5rem; font-size:0.8rem; color:#64748b; text-align:center;">A new link and verification code will be sent to your email.</div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            const SUPABASE_URL = 'https://sdrwdvvrojhhxnyydsao.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcndkdnZyb2poaHhueXlkc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ3MTYsImV4cCI6MjA5NTQ2MDcxNn0.M67nknliCzw3EcfHM5EhbSxan1gedDmOVwsWOK4sYMM';
+            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            const ticketInput = document.getElementById('ticketInput');
+            const codeInput = document.getElementById('codeInput');
+            const verifyBtn = document.getElementById('verifyBtn');
+            const resultArea = document.getElementById('resultArea');
+            const errorArea = document.getElementById('errorArea');
+            const errorMessage = document.getElementById('errorMessage');
+            const requestArea = document.getElementById('requestArea');
+            const requestNewBtn = document.getElementById('requestNewBtn');
+            const clientName = document.getElementById('clientName');
+            const clientEmail = document.getElementById('clientEmail');
+            const clientCode = document.getElementById('clientCode');
+            const statusBadge = document.getElementById('statusBadge');
+            const amountDue = document.getElementById('amountDue');
+            const dueDate = document.getElementById('dueDate');
+            const payBtn = document.getElementById('payBtn');
+            const toast = document.getElementById('toast');
+            let toastTimeout = null;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const ticketFromUrl = urlParams.get('ticket');
+            if (ticketFromUrl) {
+                ticketInput.value = ticketFromUrl;
+                setTimeout(() => verifyTicket(), 300);
+            }
+
+            function showToast(msg, icon = 'fa-check-circle') {
+                toast.innerHTML = `<i class="fas ${icon}"></i> ${msg}`;
+                toast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => toast.classList.remove('show'), 3500);
+            }
+
+            function formatCurrency(val) { return '$' + Number(val).toFixed(2); }
+            function formatDate(dateStr) {
+                if (!dateStr) return '—';
+                const d = new Date(dateStr + 'T00:00:00');
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            // ── Ticket generation (same as finance) ──
+            function generateTicket() {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let ticket = '';
+                for (let i = 0; i < 16; i++) ticket += chars.charAt(Math.floor(Math.random() * chars.length));
+                return ticket;
+            }
+            function generateVerificationCode() {
+                return String(Math.floor(100000 + Math.random() * 900000));
+            }
+
+            async function createTicketForClient(clientId) {
+                let ticket = generateTicket();
+                let attempts = 0;
+                let unique = false;
+                while (!unique && attempts < 10) {
+                    const { data: existing } = await supabaseClient
+                        .from('clients')
+                        .select('id')
+                        .eq('ticket', ticket)
+                        .maybeSingle();
+                    if (!existing) unique = true;
+                    else { ticket = generateTicket(); attempts++; }
+                }
+                if (!unique) throw new Error('Could not generate unique ticket');
+                const verificationCode = generateVerificationCode();
+                const expirySeconds = Math.floor(Date.now() / 1000) + 300;
+                const { error } = await supabaseClient
+                    .from('clients')
+                    .update({
+                        ticket: ticket,
+                        verification_code: verificationCode,
+                        ticket_used: false,
+                        ticket_expires_at: expirySeconds
+                    })
+                    .eq('id', clientId);
+                if (error) throw error;
+                return { ticket, verificationCode };
+            }
+
+            let verifiedClient = null;
+
+            async function verifyTicket() {
+                const ticket = ticketInput.value.trim();
+                const code = codeInput.value.trim();
+                if (ticket.length < 6 || code.length !== 6) {
+                    errorArea.classList.remove('hidden');
+                    errorMessage.textContent = 'Please enter a valid ticket and a 6‑digit verification code.';
+                    resultArea.classList.add('hidden');
+                    requestArea.classList.add('hidden');
+                    return;
+                }
+
+                verifyBtn.disabled = true;
+                verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+                const { data, error } = await supabaseClient
+                    .from('clients')
+                    .select('id, name, email, client_code, monthly_fee, next_invoice_date, ticket, verification_code, ticket_used, ticket_expires_at')
+                    .eq('ticket', ticket)
+                    .maybeSingle();
+
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fas fa-search"></i> Verify';
+
+                errorArea.classList.add('hidden');
+                resultArea.classList.add('hidden');
+                requestArea.classList.add('hidden');
+
+                if (error || !data) {
+                    errorArea.classList.remove('hidden');
+                    errorMessage.textContent = 'Invalid ticket. Please check the code and try again.';
+                    return;
+                }
+
+                if (data.verification_code !== code) {
+                    errorArea.classList.remove('hidden');
+                    errorMessage.textContent = 'Incorrect verification code. Please check your email.';
+                    return;
+                }
+
+                if (data.ticket_used) {
+                    errorArea.classList.remove('hidden');
+                    errorMessage.textContent = 'This ticket has already been used.';
+                    requestArea.classList.remove('hidden');
+                    verifiedClient = data;
+                    return;
+                }
+
+                // ── Check expiry with 30-second grace period ──
+                const now = Math.floor(Date.now() / 1000);
+                const expiry = data.ticket_expires_at;
+                const grace = 30; // seconds
+                if (expiry && (expiry + grace) < now) {
+                    errorArea.classList.remove('hidden');
+                    errorMessage.textContent = 'This ticket has expired. Please request a new link.';
+                    requestArea.classList.remove('hidden');
+                    verifiedClient = data;
+                    return;
+                }
+
+                // Valid ticket
+                verifiedClient = data;
+                clientName.textContent = data.name;
+                clientEmail.textContent = data.email;
+                clientCode.textContent = 'Client ID: ' + (data.client_code || '—');
+                statusBadge.textContent = 'Valid';
+                statusBadge.className = 'status-badge status-valid';
+                amountDue.textContent = formatCurrency(data.monthly_fee || 0);
+                dueDate.textContent = 'Due: ' + formatDate(data.next_invoice_date);
+                resultArea.classList.remove('hidden');
+                requestArea.classList.add('hidden');
+            }
+
+            verifyBtn.addEventListener('click', verifyTicket);
+            ticketInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') verifyTicket(); });
+            codeInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') verifyTicket(); });
+
+            // ── Pay ──
+            payBtn.addEventListener('click', async function() {
+                if (!verifiedClient) return;
+                if (!confirm(`Confirm payment of ${formatCurrency(verifiedClient.monthly_fee || 0)} for ${verifiedClient.name}?`)) return;
+
+                payBtn.disabled = true;
+                payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+                const today = new Date().toISOString().split('T')[0];
+                const { error: payError } = await supabaseClient
+                    .from('payments')
+                    .insert({
+                        client_id: verifiedClient.id,
+                        amount: verifiedClient.monthly_fee || 0,
+                        paid_at: today,
+                        method: 'ticket'
+                    });
+
+                if (payError) {
+                    console.error(payError);
+                    // Check if it's an RLS error
+                    if (payError.message && payError.message.includes('row-level security policy')) {
+                        showToast('Payment failed: The ticket may have expired or been used. Please request a new link.', 'fa-exclamation-circle');
+                    } else {
+                        showToast('Payment failed: ' + payError.message, 'fa-exclamation-circle');
+                    }
+                    payBtn.disabled = false;
+                    payBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment';
+                    return;
+                }
+
+                // Update client: extend due date, mark ticket used
+                const newDue = new Date();
+                newDue.setMonth(newDue.getMonth() + 1);
+                const newDueStr = newDue.toISOString().split('T')[0];
+                const { error: updateError } = await supabaseClient
+                    .from('clients')
+                    .update({
+                        next_invoice_date: newDueStr,
+                        ticket_used: true
+                    })
+                    .eq('id', verifiedClient.id);
+
+                if (updateError) {
+                    console.error(updateError);
+                    showToast('Payment recorded but could not update due date. Please contact support.', 'fa-exclamation-circle');
+                    payBtn.disabled = false;
+                    payBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment';
+                    return;
+                }
+
+                // ── Send success email ──
+                try {
+                    const successBody =
+`Dear ${verifiedClient.name},
+
+We have successfully received your payment of ${formatCurrency(verifiedClient.monthly_fee || 0)}.
+
+Your new due date is ${formatDate(newDueStr)}.
+
+Thank you for your business!
+
+Best regards,
+A+Connect`;
+
+                    const emailPayload = {
+                        recipients: [verifiedClient.email],
+                        subject: 'Payment Confirmation – A+Connect',
+                        body: successBody
+                    };
+
+                    await fetch('https://sdrwdvvrojhhxnyydsao.supabase.co/functions/v1/Send-emails-', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify(emailPayload)
+                    });
+                    // We don't wait for the email to succeed – it's a best-effort notification.
+                } catch (emailErr) {
+                    console.error('Failed to send success email:', emailErr);
+                    // Don't show an error to the user; payment already succeeded.
+                }
+
+                showToast('Payment successful! Your due date is now ' + formatDate(newDueStr), 'fa-check');
+                payBtn.disabled = true;
+                payBtn.innerHTML = '<i class="fas fa-check"></i> Paid';
+                statusBadge.textContent = 'Used';
+                statusBadge.className = 'status-badge status-used';
+                verifiedClient = null;
+                payBtn.disabled = false;
+                payBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm Payment';
+            });
+
+            // ── Request new link and code ──
+            requestNewBtn.addEventListener('click', async function() {
+                if (!verifiedClient) {
+                    showToast('No client found. Please verify your ticket first.', 'fa-exclamation-circle');
+                    return;
+                }
+                const client = verifiedClient;
+                if (!confirm(`A new link and verification code will be sent to ${client.email}. Continue?`)) return;
+
+                requestNewBtn.disabled = true;
+                requestNewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+                try {
+                    const { ticket, verificationCode } = await createTicketForClient(client.id);
+                    const baseUrl = 'https://mathonzi04.github.io/Web/settle-payments.html';
+                    const link = `${baseUrl}?ticket=${ticket}`;
+                    const body =
+`Dear ${client.name},
+
+You requested a new payment link.
+
+🔗 Click here to settle your payment:
+${link}
+
+Verification code: **${verificationCode}**
+
+This link and code will expire in 5 minutes.
+
+Client ID: ${client.client_code || '—'}
+
+Thank you,
+A+Connect`;
+
+                    const payload = {
+                        recipients: [client.email],
+                        subject: 'New Payment Link Requested',
+                        body: body
+                    };
+
+                    const response = await fetch('https://sdrwdvvrojhhxnyydsao.supabase.co/functions/v1/Send-emails-', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Failed to send email');
+                    }
+                    showToast('New link and code sent to your email!', 'fa-envelope');
+                    ticketInput.value = ticket;
+                    codeInput.value = '';
+                    requestArea.classList.add('hidden');
+                    errorArea.classList.add('hidden');
+                    resultArea.classList.add('hidden');
+                    verifiedClient = null;
+                } catch (err) {
+                    console.error(err);
+                    showToast('Failed to send new link: ' + err.message, 'fa-exclamation-circle');
+                } finally {
+                    requestNewBtn.disabled = false;
+                    requestNewBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Request New Link & Code';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

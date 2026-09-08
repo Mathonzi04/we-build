@@ -18,7 +18,7 @@
     .card { background: white; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem; }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-weight: 500; margin-bottom: 0.3rem; }
-    .form-group input, .form-group textarea { width: 100%; padding: 0.6rem; border-radius: 20px; border: 1px solid #cbd5e1; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.6rem; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 0.95rem; }
     .benefit-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
     .benefit-row i { color: #10b981; font-size: 1.2rem; }
     .benefit-row input { flex: 1; }
@@ -78,11 +78,23 @@
         </div>
         <button type="button" id="addBenefitBtn" class="btn-secondary" style="margin-top:0.5rem;"><i class="fas fa-plus"></i> Add another benefit</button>
       </div>
+
+      <!-- NEW: Project Category -->
+      <div class="form-group">
+        <label>Project Category *</label>
+        <select id="projectType" required>
+          <option value="">Select category</option>
+          <option value="built-website">Built Website (live, custom domain)</option>
+          <option value="built-webapp">Built Web App (live, custom domain)</option>
+          <option value="demo-website">Demo Website (GitHub/Vercel)</option>
+          <option value="demo-webapp">Demo Web App (GitHub/Vercel)</option>
+        </select>
+      </div>
       
-      <div class="form-group"><label>Set Up Price (USD) *</label><input id="price" type="number" required></div>
+      <div class="form-group"><label>Once-off Price (USD) *</label><input id="price" type="number" required></div>
       <div class="form-group"><label>Monthly Price (USD)</label><input id="monthly" type="number" value="0"></div>
       
-      <!-- NEW: GitHub Link -->
+      <!-- GitHub Link -->
       <div class="form-group"><label>GitHub Repository URL</label><input id="githubUrl" type="url" placeholder="https://github.com/your/repo"></div>
       
       <input type="hidden" id="editingId" value="">
@@ -97,7 +109,7 @@
     <h3><i class="fas fa-list"></i> Existing Templates</h3>
     <table id="templatesTable">
       <thead><tr>
-        <th>Images</th><th>Title</th><th>Price</th><th>Monthly</th>
+        <th>Images</th><th>Title</th><th>Category</th><th>Price</th><th>Monthly</th>
         <th>GitHub</th><th>Actions</th>
       </tr></thead>
       <tbody></tbody>
@@ -208,6 +220,8 @@
       const title = document.getElementById('title').value.trim();
       if (!title) return alert('Template name required');
       const description = document.getElementById('description').value.trim();
+      const projectType = document.getElementById('projectType').value;
+      if (!projectType) return alert('Please select a project category');
       const price = parseInt(document.getElementById('price').value);
       const monthly = parseInt(document.getElementById('monthly').value) || 0;
       const githubUrl = document.getElementById('githubUrl').value.trim();
@@ -235,11 +249,12 @@
         title,
         description,
         type: 'template',
+        project_type: projectType,                 // <-- NEW
         price_zar: price,
         monthly_fee: monthly,
         images: images,
         features: benefits,
-        github_url: githubUrl || null   // <-- NEW
+        github_url: githubUrl || null
       };
 
       let error;
@@ -272,6 +287,7 @@
       document.getElementById('image2').value = '';
       document.getElementById('image3').value = '';
       document.getElementById('githubUrl').value = '';
+      document.getElementById('projectType').value = '';    // <-- reset dropdown
       setBenefits(['', '', '', '']);
     }
 
@@ -284,6 +300,7 @@
       document.getElementById('price').value = data.price_zar;
       document.getElementById('monthly').value = data.monthly_fee || 0;
       document.getElementById('githubUrl').value = data.github_url || '';
+      document.getElementById('projectType').value = data.project_type || '';  // <-- set category
       setBenefits(data.features || []);
       existingImageUrls = data.images || [];
       const previewDivs = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
@@ -318,19 +335,28 @@
       if (error) return;
       const tbody = document.querySelector('#templatesTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#6b7280;">No templates yet</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:#6b7280;">No templates yet</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(t => {
         const githubLink = t.github_url 
           ? `<a href="${escapeHtml(t.github_url)}" target="_blank" class="github-link"><i class="fab fa-github"></i></a>` 
           : '—';
+        // Human-readable category label
+        const catLabels = {
+          'built-website': 'Built Website',
+          'built-webapp': 'Built Web App',
+          'demo-website': 'Demo Website',
+          'demo-webapp': 'Demo Web App'
+        };
+        const categoryLabel = catLabels[t.project_type] || t.project_type || '—';
         return `
         <tr>
           <td>${t.images && t.images.length ? `<img src="${t.images[0]}" class="template-img">` : '—'}</td>
           <td><strong>${escapeHtml(t.title)}</strong></td>
-          <td>USD${t.price_zar}</td>
-          <td>USD${t.monthly_fee || 0}</td>
+          <td>${escapeHtml(categoryLabel)}</td>
+          <td>$${t.price_zar}</td>
+          <td>$${t.monthly_fee || 0}</td>
           <td>${githubLink}</td>
           <td>
             <button class="btn-warning" onclick="editTemplate('${t.id}')">Edit</button>
