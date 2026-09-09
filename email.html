@@ -298,7 +298,7 @@
 </head>
 <body>
 
-  <!-- HEADER & NAV (unchanged) -->
+  <!-- HEADER & NAV -->
   <header class="admin-header">
     <div class="brand">
       <i class="fas fa-crown"></i>
@@ -316,6 +316,7 @@
     <a href="reviews.html"><i class="fas fa-star"></i>Reviews</a>
     <a href="clients.html"><i class="fas fa-users"></i>Clients</a>
     <a href="email.html" class="active"><i class="fas fa-paper-plane"></i>Email</a>
+    <a href="finances.html"><i class="fas fa-coins"></i>Finance</a>
     <a href="about.html"><i class="fas fa-info-circle"></i>About</a>
   </nav>
 
@@ -451,21 +452,24 @@
         reader.readAsDataURL(file);
       });
 
-      // ── Clients ──
+      // ── Clients (FIXED: use `status` instead of `is_active`) ──
       async function loadClients() {
         recipientUl.innerHTML = `<li class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading clients...</li>`;
         const { data, error } = await supabaseClient
           .from('clients')
-          .select('id, name, email, is_active')
+          .select('id, name, email, status') // ← selected `status`
           .order('id', { ascending: true });
 
         if (error) {
           console.error('Error loading clients:', error);
-          recipientUl.innerHTML = `<li class="empty-state"><i class="fas fa-exclamation-triangle"></i> Failed to load clients.</li>`;
+          recipientUl.innerHTML = `<li class="empty-state"><i class="fas fa-exclamation-triangle"></i> Failed to load clients. ${error.message}</li>`;
           return;
         }
 
-        clients = data || [];
+        clients = (data || []).map(c => ({
+          ...c,
+          is_active: c.status === 'active'   // derive boolean
+        }));
         renderRecipients();
       }
 
@@ -568,7 +572,6 @@
         });
         historyBody.innerHTML = html;
 
-        // Attach delete event listeners
         historyBody.querySelectorAll('.delete-btn').forEach(btn => {
           btn.addEventListener('click', function() {
             const id = parseInt(this.dataset.id);
@@ -577,7 +580,6 @@
         });
       }
 
-      // ── Delete individual history entry ──
       async function deleteHistoryEntry(id) {
         if (!confirm('Delete this history entry?')) return;
         const { error } = await supabaseClient
@@ -588,17 +590,16 @@
           console.error('Delete error:', error);
           alert('Failed to delete entry.');
         } else {
-          loadHistory(); // refresh
+          loadHistory();
         }
       }
 
-      // ── Clear all history ──
       async function clearAllHistory() {
         if (!confirm('⚠️ Delete ALL email history? This cannot be undone.')) return;
         const { error } = await supabaseClient
           .from('email_logs')
           .delete()
-          .neq('id', 0); // delete all rows
+          .neq('id', 0);
         if (error) {
           console.error('Clear all error:', error);
           alert('Failed to clear history.');
@@ -647,8 +648,7 @@
 
           if (response.ok && data.success) {
             statusDiv.innerHTML = `<span style="color:#166534;">✅ Email sent successfully to ${recipients.length} recipient(s)!</span>`;
-            loadHistory(); // refresh history
-            // Clear attachment after send
+            loadHistory();
             fileInput.value = '';
             fileNameSpan.textContent = 'No file chosen';
             attachmentData = null;
